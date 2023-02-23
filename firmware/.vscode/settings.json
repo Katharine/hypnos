@@ -50,6 +50,7 @@
         "iomanip": "cpp",
         "ctime": "cpp",
         "sstream": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "any": "cpp"
     }
 }
