@@ -43,6 +43,12 @@ bool eightsleep::authenticate() {
     return true;
 }
 
+
+void eightsleep::set_login(const std::string& username, const std::string& password) {
+    this->username = username;
+    this->password = password;
+}
+
 rd::expected<std::vector<alarm>, std::string> eightsleep::get_alarms() {
     if (!client.auth.user_id) {
         return rd::unexpected("user is not logged in");

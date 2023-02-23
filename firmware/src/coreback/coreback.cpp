@@ -1,9 +1,8 @@
-#ifndef coreback_coreback_h
-#define coreback_coreback_h
-
 #include <any>
 #include <functional>
 #include <Arduino.h>
+
+#include "coreback.h"
 
 namespace coreback {
 
@@ -60,5 +59,3 @@ void tick(bool blocking) {
 }
 
 }
-
-#endif

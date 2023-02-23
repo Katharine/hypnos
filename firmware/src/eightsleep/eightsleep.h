@@ -11,6 +11,9 @@
 
 namespace eightsleep {
 
+/**
+ * eightsleep provides a mechanism to interact with the Eight Sleep API.
+ */
 class eightsleep {
 private:
     std::string username;
@@ -19,14 +22,20 @@ private:
     internal::api_client client;
 
 public:
-    eightsleep(const std::string& username, const std::string& password) : username(username), password(password) {
-    }
+    eightsleep() {}
+    eightsleep(const std::string& username, const std::string& password) : username(username), password(password) {}
 
+    void set_login(const std::string& username, const std::string& password);
+
+    /**
+     * Authenticates with both the legacy and modern Eight Sleep APIs. Requires for any subsequent call.
+     */
     bool authenticate();
-    rd::expected<std::vector<alarm>, std::string> get_alarms();
 
-private:
-    std::optional<std::pair<std::string, std::string>> retrieveToken(WiFiClient& client);
+    /**
+     * Fetches a vector of alarms that the user has set. May fail if the user has set too many alarms.
+     */
+    rd::expected<std::vector<alarm>, std::string> get_alarms();
 };
 }
 
