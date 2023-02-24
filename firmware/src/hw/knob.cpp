@@ -2,15 +2,21 @@
 
 #include "knob.h"
 
+#include "rotary_encoder.h"
+
 namespace hw {
+
+static void rotary_tick(RotaryEncoder *encoder) {
+    encoder->tick();
+}
 
 void knob::init() {
     pinMode(ROTARY_BUTTON, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(ROTARY_ENCODER_A), rotary_tick, CHANGE, &encoder);
+    attachInterrupt(digitalPinToInterrupt(ROTARY_ENCODER_B), rotary_tick, CHANGE, &encoder);
 }
 
 void knob::tick() {
-    encoder.tick();
-
     if (encoder.getPosition() != last_pos) {
         last_pos = encoder.getPosition();
         if (on_rotation) {
