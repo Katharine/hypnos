@@ -5,6 +5,7 @@
 #include <memory>
 #include <hw/display.h>
 #include <hw/knob.h>
+#include <scheduler/scheduler.h>
 #include "../base_app.h"
 #include "../main/main_app.h"
 
@@ -21,6 +22,7 @@ private:
     std::unique_ptr<base_app> active_app;
     hw::display display;
     hw::knob knob;
+    scheduler::scheduler scheduler;
 
 public:
     void init_core0();

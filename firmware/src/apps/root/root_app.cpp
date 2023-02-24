@@ -21,7 +21,7 @@ void root_app::init_core1() {
     knob.init();
 
     // For now we unconditionally bring up the main app
-    active_app = std::unique_ptr<base_app>(new main::main_app(display, knob));
+    active_app = std::unique_ptr<base_app>(new main::main_app(display, knob, scheduler));
     active_app->init();
 }
 
@@ -34,6 +34,7 @@ void root_app::tick_core0() {
 void root_app::tick_core1() {
     coreback::tick(/* blocking= */ false);
     knob.tick();
+    scheduler.tick();
     if (active_app) {
         active_app->tick();
     }

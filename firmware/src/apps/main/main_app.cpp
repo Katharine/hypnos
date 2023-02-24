@@ -44,7 +44,18 @@ void main_app::init() {
         display.print("Authentication successful");
         Serial.println("auth succeeded.");
         ready = true;
+
+        // Re-authenticate every ten hours.
+        // TODO: this should be based on the token validity time.
+        // Also it should probably live in eightsleep (but then that needs a scheduler reference...)
+        scheduler.schedule_repeating_task(36'000'000, [&]() {
+            Serial.println("Reauthenticating...");
+            coreback::run_elsewhere([&]() {
+                client.authenticate();
+            });
+        });
     });
+
 }
 
 void main_app::tick() {
