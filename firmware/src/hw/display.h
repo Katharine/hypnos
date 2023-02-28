@@ -4,13 +4,15 @@
 #include <string>
 
 #include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
+
+#include <Adafruit_GFX_Buffer.h>
+#include <Adafruit_SSD1351.h>
 
 namespace hw {
 
 class display {
 private:
-    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 20, 4);
+    Adafruit_GFX_Buffer<Adafruit_SSD1351> oled = Adafruit_GFX_Buffer(128, 128, Adafruit_SSD1351(128, 128, &SPI, 17, 21, 20));
 
 public:
     void init();

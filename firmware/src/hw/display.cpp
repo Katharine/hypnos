@@ -1,23 +1,30 @@
 #include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
+
+#include <Adafruit_GFX.h>
 
 #include "display.h"
 
 namespace hw {
 
 void display::init() {
-    Wire.setSDA(8);
-    Wire.setSCL(9);
-    lcd.init();
-    lcd.backlight();
+    SPI.setRX(16);
+    SPI.setTX(19);
+    SPI.setSCK(18);
+    SPI.setCS(17);
+    SPI.begin();
+    oled.begin(20000000); // 20 MHz.
+    clear();
 }
 
 void display::clear() {
-    lcd.clear();
+    oled.fillScreen(0);
+    oled.setCursor(0, 0);
+    oled.display();
 }
 
 void display::print(const std::string& message) {
-    lcd.print(message.c_str());
+    oled.print(message.c_str());
+    oled.display();
 }
 
 }
