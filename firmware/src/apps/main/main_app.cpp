@@ -13,8 +13,6 @@
 namespace apps {
 namespace main {
 
-const pin_size_t TONE_PIN = 6;
-
 void main_app::init() {
     // TODO: get these dynamically.
     client.set_login(HARDCODED_EIGHTSLEEP_USERNAME, HARDCODED_EIGHTSLEEP_PASSWORD);
@@ -55,7 +53,6 @@ void main_app::init() {
             });
         });
     });
-
 }
 
 void main_app::tick() {
@@ -63,22 +60,23 @@ void main_app::tick() {
 }
 
 void main_app::knob_pressed() {
-    if (toning) {
-        noTone(TONE_PIN);
-    } else {
-        tone(TONE_PIN, (knob.position() * 100) + 1000);
-    }
-    toning = !toning;
     display.clear();
-    display.print("Button pressed!");
+    display.print("Cancelling alarm...");
+
+    coreback::run_elsewhere(std::bind(&eightsleep::eightsleep::stop_alarms, &client), [&](std::any result){
+        bool success = std::any_cast<bool>(result);
+        display.clear();
+        if (success) {
+            display.print("Alarm cancelled.");
+        } else {
+            display.print("Alarm cancellation failed");
+        }
+    });
 }
 
 void main_app::knob_rotated() {
     display.clear();
     display.print("pos: " + std::to_string(knob.position()) + ", dir: " + std::to_string(knob.direction()));
-    if (toning) {
-        tone(TONE_PIN, (knob.position() * 100) + 1000);
-    }
 }
 
 }

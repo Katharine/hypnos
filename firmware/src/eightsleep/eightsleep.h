@@ -27,15 +27,14 @@ public:
 
     void set_login(const std::string& username, const std::string& password);
 
-    /**
-     * Authenticates with both the legacy and modern Eight Sleep APIs. Requires for any subsequent call.
-     */
+    /// Authenticates with both the legacy and modern Eight Sleep APIs. Requires for any subsequent call.
     bool authenticate();
 
-    /**
-     * Fetches a vector of alarms that the user has set. May fail if the user has set too many alarms.
-     */
+    /// Fetches a vector of alarms that the user has set. May fail if the user has set too many alarms.
     rd::expected<std::vector<alarm>, std::string> get_alarms();
+
+    /// Stops any active alarms. 
+    bool stop_alarms();
 };
 }
 

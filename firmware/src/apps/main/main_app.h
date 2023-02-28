@@ -18,8 +18,6 @@ private:
     hw::knob& knob;
     scheduler::scheduler& scheduler;
 
-    bool toning = false;
-
 public:
     /**
      * main_app only holds on to references to the objects passed in here - the caller is

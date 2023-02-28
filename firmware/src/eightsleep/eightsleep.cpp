@@ -82,6 +82,22 @@ rd::expected<std::vector<alarm>, std::string> eightsleep::get_alarms() {
     return alarms;
 }
 
+bool eightsleep::stop_alarms() {
+    if (!client.auth.user_id || !client.auth.oauth_token) {
+        return false;
+    }
+    auto result = client.make_oauth_request({
+        .url = "https://app-api.8slp.net/v1/users/" + *client.auth.user_id + "/alarms/active/stop",
+        .method = "PUT",
+    });
+
+    if (!result) {
+        Serial.println("stop alarm request failed.");
+        return false;
+    }
+    return true;
+}
+
 static weekdays parse_repeat_days(JsonObject repeat) {
     if (!repeat["enabled"]) {
         return weekdays::none;

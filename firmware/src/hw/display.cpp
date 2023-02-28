@@ -6,8 +6,8 @@
 namespace hw {
 
 void display::init() {
-    Wire.setSDA(0);
-    Wire.setSCL(1);
+    Wire.setSDA(8);
+    Wire.setSCL(9);
     lcd.init();
     lcd.backlight();
 }

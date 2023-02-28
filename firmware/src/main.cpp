@@ -6,7 +6,7 @@ void setup() {
     app.init_core0();
 }
 
-void setup1() {    
+void setup1() {
     app.init_core1();
 }
 

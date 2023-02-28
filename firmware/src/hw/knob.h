@@ -15,9 +15,9 @@ public:
     button_callback on_rotation;
 
 private:
-    const pin_size_t ROTARY_ENCODER_A = 3;
-    const pin_size_t ROTARY_ENCODER_B = 2;
-    const pin_size_t ROTARY_BUTTON = 4;
+    const pin_size_t ROTARY_ENCODER_A = 11;
+    const pin_size_t ROTARY_ENCODER_B = 10;
+    const pin_size_t ROTARY_BUTTON = 12;
 
     int last_pos = 0;
     absolute_time_t last_button_state_change;
