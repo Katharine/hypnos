@@ -1,0 +1,42 @@
+menu "Birb Port Config"
+
+    menu "Display setup"
+        config PORT_DISPLAY_MOSI
+            int "Display MOSI pin number"
+            default 11
+
+        config PORT_DISPLAY_SCLK
+            int "Display SCLK pin number"
+            default 12
+
+        config PORT_DISPLAY_CS
+            int "Display CS pin number"
+            default 13
+
+        config PORT_DISPLAY_DC
+            int "Display DC pin number"
+            default 14
+
+        config PORT_DISPLAY_RESET
+            int "Display Reset pin number"
+            default 10
+
+        config PORT_DISPLAY_FREQ
+            int "Port display frequency"
+            default 20000000
+    endmenu
+
+    menu "Encoder setup"
+        config PORT_ENCODER_A
+            int "Encoder pin A"
+            default 47
+
+        config PORT_ENCODER_B
+            int "Encoder pin B"
+            default 21
+
+        config PORT_ENCODER_BUTTON
+            int "Encoder button pin"
+            default 48
+    endmenu
+endmenu
