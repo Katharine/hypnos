@@ -45,6 +45,7 @@ App::~App() {
 }
 
 void App::presentWiFiUI() {
+    auto lock = lvgl_port::Lock();
     wifi_screen = lv_obj_create(nullptr);
     lv_obj_set_size(wifi_screen, lvgl_port::LVGLPort::DISPLAY_WIDTH, lvgl_port::LVGLPort::DISPLAY_HEIGHT);
 
@@ -83,6 +84,7 @@ void App::wifiConnectCallback(bool connected) {
 }
 
 void App::presentLinkUI() {
+    auto lock = lvgl_port::Lock();
     ESP_LOGI("App", "Free memory: %lu bytes; largest free block: %d bytes.", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
     link_screen = lv_obj_create(nullptr);
     lv_obj_set_size(link_screen, lvgl_port::LVGLPort::DISPLAY_WIDTH, lvgl_port::LVGLPort::DISPLAY_HEIGHT);

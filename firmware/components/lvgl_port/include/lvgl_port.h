@@ -37,6 +37,12 @@ private:
     static void lvgl_indev_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data);
 };
 
+class Lock {
+public:
+    Lock();
+    ~Lock();
+};
+
 }
 
 #endif

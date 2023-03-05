@@ -141,13 +141,12 @@ void LVGLPort::setActiveGroup(lv_group_t *group) {
     lv_indev_set_group(indev, group);
 }
 
-//LVGLPort::LVGLPort(LVGLPort &&other) noexcept : indev_drv(other.indev_drv), indev(other.indev), encoder(std::move(other.encoder)), panel_io(other.panel_io), panel(other.panel), disp(other.disp)  {
-//    other.disp = nullptr;
-//    other.panel = nullptr;
-//    other.panel_io = nullptr;
-//    other.indev = nullptr;
-//    other.indev_drv = {};
-//    other.has_gone = true;
-//}
+Lock::Lock() {
+    lvgl_port_lock(0);
+}
+
+Lock::~Lock() {
+    lvgl_port_unlock();
+}
 
 }
