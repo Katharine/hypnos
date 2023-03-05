@@ -85,7 +85,7 @@ void LVGLPort::configureScreen() {
     const lvgl_port_display_cfg_t disp_cfg = {
         .io_handle = panel_io,
         .panel_handle = panel,
-        .buffer_size = static_cast<uint32_t>(DISPLAY_WIDTH * DISPLAY_HEIGHT),
+        .buffer_size = static_cast<uint32_t>(DISPLAY_WIDTH * DISPLAY_HEIGHT/10),
         .double_buffer = true,
         .hres = static_cast<uint32_t>(DISPLAY_WIDTH),
         .vres = static_cast<uint32_t>(DISPLAY_HEIGHT),
@@ -125,7 +125,7 @@ void LVGLPort::configureBacklight() {
         .channel = LEDC_CHANNEL_0,
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = LEDC_TIMER_0,
-        .duty = 1,
+        .duty = 8192,
         .hpoint = 0,
     };
     ESP_ERROR_CHECK(ledc_channel_config(&channel_config));

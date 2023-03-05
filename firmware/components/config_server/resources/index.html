@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hypnos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Helvetica Neue", Helvetica, sans-serif;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 10px 0;
+            font-size: 18px;
+        }
+
+        p {
+            padding: 0;
+            margin: 0;
+        }
+
+        input {
+            box-sizing: border-box;
+            margin: 0 20px;
+            padding: 20px 17px;
+            width: calc(100% - 40px);
+            background-color: #17191b;
+            color: #5288fe;
+            border: 0;
+            border-bottom: 1px solid #9aa3ba;
+            font-size: 16px;
+        }
+
+        input::placeholder {
+            color: #9aa3ba;
+        }
+
+        p:first-child > input {
+            border-radius: 10px 10px 0 0;
+        }
+
+        p:last-child > input {
+            border-bottom: 0;
+            border-radius: 0 0 10px 10px;
+        }
+
+        p:only-child > input {
+            border-radius: 10px;
+        }
+
+        .button-holder {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-top: 30px;
+        }
+
+        button {
+            text-align: center;
+            height: 50px;
+            border-radius: 25px;
+            border: 0;
+            width: 150px;
+            background-color: #246afe;
+            color: white;
+            font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Helvetica Neue", Helvetica, sans-serif;
+        }
+
+        button:active {
+            background-color: #5289fe;
+        }
+
+        #network-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            box-sizing: border-box;
+            margin: 0 20px;
+            padding: 20px 17px;
+            width: calc(100% - 40px);
+            background-color: #17191b;
+            border: 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        li:first-child {
+            border-radius: 10px 10px 0 0;
+        }
+
+        li:last-child {
+            border-radius: 0 0 10px 10px;
+        }
+
+        li:active {
+            background-color: #353b3d;
+        }
+
+        .loader {
+            font-size: 10px;
+            margin: 50px auto;
+            text-indent: -9999em;
+            width: 5em;
+            height: 5em;
+            border-radius: 50%;
+            background: #d9cafe;
+            background: linear-gradient(to right, #d9cafe 10%, rgba(217,202,254, 0) 42%);
+            position: relative;
+            animation: load3 1.4s infinite linear;
+            transform: translateZ(0);
+        }
+        .loader:before {
+            width: 50%;
+            height: 50%;
+            background: #d9cafe;
+            border-radius: 100% 0 0 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            content: '';
+        }
+        .loader:after {
+            background: #000000;
+            width: 75%;
+            height: 75%;
+            border-radius: 50%;
+            content: '';
+            margin: auto;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+        }
+        @keyframes load3 {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            text-align: center;
+            width: 100%;
+        }
+
+    </style>
+</head>
+<body>
+<div id="network-selection">
+    <h1>Pick a Network</h1>
+    <ul id="network-list">
+    </ul>
+    <div class="loader" id="network-loader"></div>
+    <div id="network-status" class="error" style="display: none;"></div>
+</div>
+<div id="network-auth" class="form" style="display: none;">
+    <h1>Network Password</h1>
+    <div id="network-auth-content">
+        <div class="input-group">
+            <p><input placeholder="Wi-Fi Password" id="wifi_password" type="password"></p>
+        </div>
+        <div class="button-holder">
+            <button id="connect">Connect</button>
+        </div>
+    </div>
+    <div id="network-auth-loader" class="loader" style="display: none;"></div>
+    <div id="network-auth-status" class="error" style="display: none;"></div>
+</div>
+<div id="eightsleep-auth" class="form" style="display: none;">
+    <h1>Eight Sleep login</h1>
+    <div>
+    <p><input placeholder="Eight Sleep E-mail" id="eightsleep_email" type="email"></p>
+    <p><input placeholder="Eight-Sleep Password" id="eightsleep_password" type="password"></p>
+    </div>
+    <div class="button-holder">
+        <button id="login">Log in</button>
+    </div>
+</div>
+<script type="text/javascript">
+    let targetSSID = null;
+    let $ = (x) => document.getElementById(x);
+    let hide = (x) => { $(x).style.display = 'none'; return $(x); }
+    let show = (x) => { $(x).style.display = 'block'; return $(x); }
+
+    async function wifiScan() {
+        let networks;
+        try {
+            let request = await fetch("/api/scan");
+            networks = await request.json();
+        } catch (e) {
+            hide('network-loader');
+            show('network-status').innerText = 'Scanning for networks failed.';
+        }
+        hide('network-loader');
+        if (!networks.success) {
+            show('network-status').innerText = 'Scanning for networks failed.';
+            return;
+        }
+        let networksSeen = new Set();
+        for (let network of networks.networks) {
+            if (networksSeen.has(network.ssid)) {
+                continue;
+            }
+            networksSeen.add(network.ssid);
+            let li = document.createElement('li');
+            li.innerText = network.ssid;
+            li.dataset.ssid = network.ssid;
+            li.dataset.authMode = network.authMode;
+            li.dataset.rssi = network.rssi;
+            li.addEventListener('touchstart', () => {});
+            li.addEventListener('click', selectNetwork);
+            $('network-list').appendChild(li);
+        }
+    }
+
+    async function selectNetwork() {
+        const element = this;
+        const ssid = element.dataset.ssid;
+        targetSSID = ssid;
+        const auth = element.dataset.authMode;
+        hide('network-selection');
+        show('network-auth');
+        if (auth === '0') {
+            await joinNetwork(ssid, null);
+        }
+    }
+
+    async function joinNetwork(ssid, psk) {
+        hide('network-auth-content');
+        show('network-auth-loader');
+        show('network-auth-status').innerText = `Connecting to ${ssid}...`;
+        const response = await fetch('/api/join', {method: 'POST', body: new URLSearchParams({ssid, psk})});
+        const j = await response.json();
+        if (j.success) {
+            hide('network-auth');
+            show('eightsleep-auth');
+        } else {
+            hide('network-auth-loader');
+            show('network-auth-content');
+            $('network-auth-status').innerText = "Network connection failed.";
+        }
+    }
+
+    async function main() {
+        $('connect').addEventListener('click', () => {
+            let password = $('wifi_password').value;
+            joinNetwork(targetSSID, password);
+        });
+        await wifiScan();
+    }
+    main();
+</script>
+</body>
+</html>

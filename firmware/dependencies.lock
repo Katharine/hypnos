@@ -1,4 +1,10 @@
 dependencies:
+  bblanchon/arduinojson:
+    component_hash: f585ce68e53fbee4ac5fb2a6921d495934c8cd6268f64af7869b5721ab5aebf5
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 6.20.0-1
   espressif/esp_lcd_gc9a01:
     component_hash: 0a669137fb2e6979d51aa1c3ed5bd3368fe231aa24815e83751a038202d58d32
     source:
@@ -28,6 +34,6 @@ dependencies:
       service_url: https://api.components.espressif.com/
       type: service
     version: 8.3.0
-manifest_hash: 851a737e29e10bf2453d3c391c1a2320c448dfb7fd5594358dfc64d994029ecf
+manifest_hash: a514cdb2e0e174b05435de31783b6bfd3dc6de092ff361f745e37ceb146f8774
 target: esp32s3
 version: 1.0.0

@@ -1,11 +1,12 @@
 ## IDF Component Manager Manifest File
 dependencies:
   espressif/esp_lcd_gc9a01: "^1.0.1"
-  "espressif/esp_lvgl_port": "^1.1.0"
+  espressif/esp_lvgl_port: "^1.1.0"
   lvgl/lvgl: ">=8.*"
+  bblanchon/arduinojson: "^6.20.0-1"
   ## Required IDF version
   idf:
-    version: ">=4.1.0"
+    version: "^5.0.1"
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

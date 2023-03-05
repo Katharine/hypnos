@@ -37,6 +37,6 @@ menu "Birb Port Config"
 
         config PORT_ENCODER_BUTTON
             int "Encoder button pin"
-            default 48
+            default 45
     endmenu
 endmenu
