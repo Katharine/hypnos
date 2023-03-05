@@ -27,7 +27,7 @@ void Client::authenticate(const std::function<void(bool)>& cb) {
             }
             ESP_LOGI("eightsleep", "Updating legacy userId/token");
             if (!loginResult->containsKey("session")) {
-                ESP_LOGE("eightsleep", "Auth result doesn't contaion session object");
+                ESP_LOGE("eightsleep", "Auth result doesn't contain session object");
                 cb(false);
                 return;
             }

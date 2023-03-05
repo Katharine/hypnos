@@ -3,6 +3,7 @@
 #include <sstream>
 #include <expected.hpp>
 #include <esp_log.h>
+#include <esp_timer.h>
 
 #include <ArduinoJson.h>
 
@@ -133,7 +134,37 @@ void ApiClient::requestWithRetries(const std::shared_ptr<http::Client>& c, esp_h
             return;
         } else {
             ESP_LOGI("apiclient", "Retrying... %d attempts remain", retry_count);
-            requestWithRetries(c, method, "", retry_count - 1, callback);
+            struct context {
+                ApiClient *client;
+                std::shared_ptr<http::Client> c;
+                esp_http_client_method_t method;
+                std::string payload;
+                int retry_count;
+                http::Callback callback;
+                esp_timer_handle_t timer;
+            };
+            auto *ctx = new context {
+                .client = this,
+                .c = c,
+                .method = method,
+                .payload = payload,
+                .retry_count = retry_count,
+                .callback = callback,
+            };
+            esp_timer_create_args_t args = {
+                .callback = [](void *arg) {
+                    ESP_LOGI("apiclient", "Retrying triggered");
+                    auto *ctx = static_cast<context*>(arg);
+                    ctx->client->requestWithRetries(ctx->c, ctx->method, ctx->payload, ctx->retry_count - 1, ctx->callback);
+                    esp_timer_delete(ctx->timer);
+                    delete ctx;
+                },
+                .arg = ctx,
+                .dispatch_method = ESP_TIMER_TASK,
+                .name = "client-retry",
+            };
+            esp_timer_create(&args, &ctx->timer);
+            esp_timer_start_once(ctx->timer, 5000000);
         }
     });
 }

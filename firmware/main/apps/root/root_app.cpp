@@ -11,6 +11,7 @@
 #include <esp_event.h>
 #include <styles.h>
 #include "../config/app.h"
+#include "../main/app.h"
 
 #include <memory>
 
@@ -31,7 +32,10 @@ void RootApp::init() {
     styles::init();
 
     if (wifi->hasConfig() && config->hasConfig()) {
+        client->setLogin(config->getEmail(), config->getPassword());
         ESP_LOGI("App", "Jumping straight into the main app!");
+        active_app = std::make_unique<apps::main::App>(port, wifi, config, client);
+        active_app->present();
     } else {
         // Start config app
         ESP_LOGI("App", "Free memory: %lu bytes; largest free block: %d bytes.", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
@@ -40,6 +44,8 @@ void RootApp::init() {
         ESP_LOGI("App", "Free memory: %lu bytes; largest free block: %d bytes.", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
         // Now we can start the main app anyway.
         ESP_LOGI("App", "Time to launch the main app!");
+        active_app = std::make_unique<apps::main::App>(port, wifi, config, client);
+        active_app->present();
     }
 }
 

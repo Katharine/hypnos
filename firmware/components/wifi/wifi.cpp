@@ -69,7 +69,7 @@ void WiFi::startNormal(const std::function<void(bool)>& fn) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
-    apConnectCallback = fn;
+    staConnectCallback = fn;
 }
 
 bool WiFi::hasConfig() {

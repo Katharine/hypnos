@@ -123,9 +123,16 @@ void Client::preparedRequest(Callback cb) {
     while (true) {
         ++attempts;
         esp_err_t err = esp_http_client_perform(handle);
+        if (!busy) {
+            return;
+        }
         if (err != ESP_ERR_HTTP_EAGAIN) {
             ESP_LOGI("http", "client_perform_attempts: %d", attempts);
-            ESP_ERROR_CHECK(err);
+            if (err != ESP_OK) {
+                if (callback) {
+                    callback(false, Response{});
+                }
+            }
             break;
         }
     }
