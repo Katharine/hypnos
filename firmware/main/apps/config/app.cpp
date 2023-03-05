@@ -3,10 +3,15 @@
 //
 
 #include "app.h"
+#include "http_cxx.hpp"
 
 #include <lvgl_port.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
+#include <esp_sntp.h>
+#include <esp_netif.h>
+#include <eightsleep.h>
 
 using namespace std::placeholders;
 
@@ -15,12 +20,28 @@ namespace apps::config {
 void App::present() {
     wifi->setAPConnectCallback([this](bool x) { wifiConnectCallback(x); });
     wifi->startAP();
+
     presentWiFiUI();
+
+    EventBits_t bits = xEventGroupWaitBits(eventGroup, 1, pdTRUE, pdTRUE, portMAX_DELAY);
+    if (!(bits & 1)) {
+        ESP_LOGE("App", "Got here, which should be impossible.");
+    }
+    // Delete the server.
+    server.reset();
+    wifi->stop();
+    wifi->setAPConnectCallback(nullptr);
 }
 
 App::App(const std::shared_ptr<lvgl_port::LVGLPort> &port, const std::shared_ptr<wifi::WiFi> &wifi,
-         const std::shared_ptr<hypnos_config::HypnosConfig> &config) : port(port), wifi(wifi), config(config) {
-    server = std::make_unique<config_server::Server>(wifi);
+         const std::shared_ptr<hypnos_config::HypnosConfig> &config, const std::shared_ptr<eightsleep::Client>& client) : port(port), wifi(wifi), config(config), client(client) {
+    server = std::make_unique<config_server::Server>(wifi, client, config);
+    eventGroup = xEventGroupCreate();
+    server->setCompletionCallback([this](bool success) { completionCallback(success); });
+}
+
+App::~App() {
+    vEventGroupDelete(eventGroup);
 }
 
 void App::presentWiFiUI() {
@@ -72,6 +93,10 @@ void App::presentLinkUI() {
     // TODO: somehow fit the text on, too.
 
     lv_scr_load_anim(link_screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+}
+
+void App::completionCallback(bool success) {
+    xEventGroupSetBits(eventGroup, 1);
 }
 
 }

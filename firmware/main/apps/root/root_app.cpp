@@ -25,18 +25,21 @@ void RootApp::init() {
     port = std::make_shared<lvgl_port::LVGLPort>();
     wifi = std::make_shared<wifi::WiFi>();
     config = std::make_shared<hypnos_config::HypnosConfig>();
+    client = std::make_shared<eightsleep::Client>();
 
     // Set up our shared styles/theming.
     styles::init();
 
     if (wifi->hasConfig() && config->hasConfig()) {
-        // Start main app
+        ESP_LOGI("App", "Jumping straight into the main app!");
     } else {
         // Start config app
         ESP_LOGI("App", "Free memory: %lu bytes; largest free block: %d bytes.", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-        active_app = std::make_unique<apps::config::App>(port, wifi, config);
+        active_app = std::make_unique<apps::config::App>(port, wifi, config, client);
         active_app->present();
         ESP_LOGI("App", "Free memory: %lu bytes; largest free block: %d bytes.", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+        // Now we can start the main app anyway.
+        ESP_LOGI("App", "Time to launch the main app!");
     }
 }
 

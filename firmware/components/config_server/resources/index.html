@@ -154,6 +154,16 @@
             width: 100%;
         }
 
+        #completion-checkmark {
+            text-align: center;
+        }
+
+        #completion-checkmark svg {
+            width: 100px;
+            height: 100px;
+            margin: 30px;
+        }
+
     </style>
 </head>
 <body>
@@ -186,6 +196,15 @@
     <div class="button-holder">
         <button id="login">Log in</button>
     </div>
+    <div id="eightsleep-status" class="error" style="display: none;"></div>
+</div>
+<div id="completion" style="display: none;">
+    <h1>Eight Sleep login</h1>
+    <div id="completion-loader" class="loader" style="display: none;"></div>
+    <div id="completion-checkmark" style="display: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" style="fill: #fff;"/></svg>
+    </div>
+    <div id="completion-status" class="error" style="display: none;"></div>
 </div>
 <script type="text/javascript">
     let targetSSID = null;
@@ -252,11 +271,32 @@
         }
     }
 
+    async function doLogin() {
+        const username = $('eightsleep_email').value;
+        const password = $('eightsleep_password').value;
+        hide('eightsleep-auth');
+        show('completion');
+        show('completion-loader');
+        hide('completion-status');
+        let result = await fetch('/api/login', {method: 'POST', body: new URLSearchParams({username, password})});
+        const j = await result.json();
+        hide('completion-loader');
+        if (j.success) {
+            show('completion-checkmark');
+            show('completion-status').innerText = "Logged in! You can close this tab.";
+        } else {
+            hide('completion');
+            show('eightsleep-auth');
+            show('eightsleep-status').innerText = "Log in failed.";
+        }
+    }
+
     async function main() {
         $('connect').addEventListener('click', () => {
             let password = $('wifi_password').value;
             joinNetwork(targetSSID, password);
         });
+        $('login').addEventListener('click', () => doLogin());
         await wifiScan();
     }
     main();

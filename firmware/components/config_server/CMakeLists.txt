@@ -1,6 +1,6 @@
 idf_component_register(SRCS "config_server.cpp"
                     INCLUDE_DIRS "include"
-                    REQUIRES hypnos_config wifi
+                    REQUIRES hypnos_config wifi eightsleep
                     PRIV_REQUIRES esp_http_server arduinojson log)
 
 component_compile_options("-Wno-missing-field-initializers")

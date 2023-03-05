@@ -13,6 +13,7 @@ public:
     WiFi();
     void startNormal(const std::function<void(bool)>& connectCallback);
     void startAP();
+    void stop();
     void joinNetwork(const std::string& ssid, const std::string& psk);
     std::string getAPSSID();
     bool hasConfig();

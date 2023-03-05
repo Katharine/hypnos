@@ -13,10 +13,12 @@ CMRC_DECLARE(web);
 
 namespace config_server {
 
-Server::Server(const std::shared_ptr<wifi::WiFi>& wifi) : wifi(wifi) {
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    ESP_ERROR_CHECK(httpd_start(&httpd, &config));
-    config.uri_match_fn = httpd_uri_match_wildcard;
+Server::Server(const std::shared_ptr<wifi::WiFi>& wifi, const std::shared_ptr<eightsleep::Client>& client,
+               const std::shared_ptr<hypnos_config::HypnosConfig>& config) : wifi(wifi), client(client), config(config) {
+    httpd_config_t httpdConfig = HTTPD_DEFAULT_CONFIG();
+    httpdConfig.stack_size = 8192; // hack our way out of stack overflow errors.
+    ESP_ERROR_CHECK(httpd_start(&httpd, &httpdConfig));
+    httpdConfig.uri_match_fn = httpd_uri_match_wildcard;
 
     // Set up some handlers
     static httpd_uri_t index = {
@@ -39,19 +41,26 @@ Server::Server(const std::shared_ptr<wifi::WiFi>& wifi) : wifi(wifi) {
         .user_ctx = this,
     };
     httpd_register_uri_handler(httpd, &join);
+    static httpd_uri_t login = {
+        .uri = "/api/login",
+        .method = HTTP_POST,
+        .handler = &Server::serveLogIn,
+        .user_ctx = this,
+    };
+    httpd_register_uri_handler(httpd, &login);
 }
 
 Server::~Server() {
     httpd_stop(httpd);
 }
 
-int Server::serveIndex(httpd_req_t *req) {
+esp_err_t Server::serveIndex(httpd_req_t *req) {
     auto f = cmrc::web::get_filesystem().open("index.html");
     httpd_resp_send(req, f.begin(), f.end() - f.begin());
     return ESP_OK;
 }
 
-int Server::serveScan(httpd_req_t *req) {
+esp_err_t Server::serveScan(httpd_req_t *req) {
     ESP_LOGI("server", "Serving scan request...");
     auto *server = static_cast<Server*>(req->user_ctx);
     int fd = httpd_req_to_sockfd(req);
@@ -141,10 +150,12 @@ esp_err_t Server::serveJoin(httpd_req_t *req) {
     esp_err_t err = httpd_query_key_value(data.data(), "ssid", ssid.data(), ssid.size() - 1);
     if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_HTTPD_RESULT_TRUNC) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad SSID");
+        return ESP_OK;
     }
     err = httpd_query_key_value(data.data(), "psk", psk.data(), psk.size() - 1);
     if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_HTTPD_RESULT_TRUNC) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad PSK");
+        return ESP_OK;
     }
 
     // If we got this far, we're actually doing something.
@@ -168,10 +179,90 @@ esp_err_t Server::serveJoin(httpd_req_t *req) {
             ctx->server->sendSocketData(ctx->fd, response);
             ctx->server->sendSocketData(ctx->fd, json);
         }, ctx);
+        server->wifi->setSTAConnectCallback(nullptr);
     });
-    server->wifi->joinNetwork(ssid.data(), psk.data());
+    server->wifi->joinNetwork(http::urlDecode(ssid.data()), http::urlDecode(psk.data()));
+    return ESP_OK;
+}
+
+esp_err_t Server::serveLogIn(httpd_req_t *req) {
+    auto server = static_cast<Server*>(req->user_ctx);
+
+    std::unique_ptr<char[]> data = std::make_unique<char[]>(256);
+    int ret = httpd_req_recv(req, data.get(), 256);
+    if (ret < 0) {
+        ESP_LOGW("server", "Reading POST data failed: %d.", ret);
+        // Docs say we have to return an error if this happens.
+        return ESP_FAIL;
+    }
+    if (ret == 256) {
+        // We probably cut off. We aren't actually supporting this - just give up here.
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request body too large");
+        return ESP_OK;
+    }
+
+    std::unique_ptr<char[]> email = std::make_unique<char[]>(120);
+    std::unique_ptr<char[]> password = std::make_unique<char[]>(101);
+
+    esp_err_t err = httpd_query_key_value(data.get(), "username", email.get(), 120);
+    if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_HTTPD_RESULT_TRUNC) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad email");
+        return ESP_OK;
+    }
+
+    err = httpd_query_key_value(data.get(), "password", password.get(), 100);
+    if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_HTTPD_RESULT_TRUNC) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad password");
+        return ESP_OK;
+    }
+
+    std::string emailStr = http::urlDecode(email.get());
+    std::string passwordStr = http::urlDecode(password.get());
+
+    server->client->setLogin(emailStr, passwordStr);
+
+    // If we got this far, we're actually doing something.
+    // Stash this away so we can respond asynchronously.
+    int fd = httpd_req_to_sockfd(req);
+
+    server->client->authenticate([=](bool successful) {
+        struct context {
+            Server *server;
+            int fd;
+            bool successful;
+            std::string email;
+            std::string password;
+        };
+        auto *ctx = new context {
+            .server = server,
+            .fd = fd,
+            .successful = successful,
+            .email = emailStr,
+            .password = passwordStr,
+        };
+        httpd_queue_work(server->httpd, [](void *arg) {
+            auto *ctx = static_cast<context*>(arg);
+            std::string json = R"({"success": )"s + (ctx->successful ? "true"s : "false"s) + "}"s;
+            std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(json.length()) + "\r\n\r\n";
+            ctx->server->sendSocketData(ctx->fd, response);
+            ctx->server->sendSocketData(ctx->fd, json);
+            ctx->server->complete(ctx->email, ctx->password);
+        }, ctx);
+    });
 
     return ESP_OK;
+}
+
+void Server::complete(const std::string &email, const std::string &password) {
+    // We're probably being called from the thing we're about to tear down, so kick ourselves to a new task for this...
+    config->storeInitialConfig(email, password);
+    if (completionCallback) {
+        completionCallback(true);
+    }
+}
+
+void Server::setCompletionCallback(const std::function<void(bool)> &fn) {
+    completionCallback = fn;
 }
 
 }

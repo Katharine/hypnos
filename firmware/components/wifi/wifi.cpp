@@ -17,7 +17,6 @@ using namespace std::literals;
 namespace wifi {
 
 WiFi::WiFi() {
-
     ESP_LOGI("wifi", "Initialising netif...");
     ESP_ERROR_CHECK(esp_netif_init());
     apNetif = esp_netif_create_default_wifi_ap();
@@ -111,7 +110,12 @@ void WiFi::eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id
         ESP_LOGI("WiFi", "station " MACSTR " leave, AID=%d",
                  MAC2STR(event->mac), event->aid);
         wifi_sta_list_t sta_list;
-        ESP_ERROR_CHECK(esp_wifi_ap_get_sta_list(&sta_list));
+        esp_err_t err = esp_wifi_ap_get_sta_list(&sta_list);
+        if (err == ESP_ERR_WIFI_STOP_STATE) {
+            ESP_LOGI("WiFi", "Got STADISCONNECTED during shutdown, ignoring.");
+            return;
+        }
+        ESP_ERROR_CHECK(err);
         if (sta_list.num == 0) {
             wifi->hasClients = false;
             if (wifi->apConnectCallback) {
@@ -158,6 +162,8 @@ void WiFi::joinNetwork(const std::string &ssid, const std::string &psk) {
         strlcpy(reinterpret_cast<char *>(config.sta.password), psk.c_str(), 64);
     }
 
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_disconnect());
+
     ESP_LOGI("wifi", "Setting STA config to connect to %s.", ssid.c_str());
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
 
@@ -167,6 +173,10 @@ void WiFi::joinNetwork(const std::string &ssid, const std::string &psk) {
 
 void WiFi::setSTAConnectCallback(std::function<void(bool)> callback) {
     staConnectCallback = std::move(callback);
+}
+
+void WiFi::stop() {
+    esp_wifi_stop();
 }
 
 }
