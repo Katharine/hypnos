@@ -5,6 +5,7 @@
 #include <driver/ledc.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_gc9a01.h>
+#include <esp_log.h>
 
 #include <utility>
 

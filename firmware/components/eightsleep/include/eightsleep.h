@@ -9,14 +9,18 @@
 #include "alarm.h"
 #include "../internal/apiclient.h"
 #include "user_auth.h"
+#include "bed.h"
 
 namespace eightsleep {
 
 
 class Client {
 private:
+    const char* TAG = "EightSleepClient";
     std::string username;
     std::string password;
+    std::string deviceId;
+    std::string bedSide;
 
     internal::ApiClient client = internal::ApiClient();
 
@@ -34,6 +38,11 @@ public:
 
     /// Stops any active alarms.
     void stopAlarms(std::function<void(bool)> cb);
+
+    void getBedStatus(const std::function<void(rd::expected<Bed, std::string>)>& cb);
+
+private:
+    void getDeviceId(const std::function<void(rd::expected<std::string, std::string>)>& cb);
 };
 
 }

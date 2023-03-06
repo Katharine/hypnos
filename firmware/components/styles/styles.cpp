@@ -4,17 +4,25 @@
 
 #include "styles.h"
 #include <lvgl.h>
+#include <wifi_widget.h>
 
 static lv_theme_t custom_theme;
 static lv_style_t screen_style;
+static lv_style_t wifi_style;
 
 namespace {
+
 
 void theme_apply_cb(lv_theme_t *theme, lv_obj_t *obj) {
     LV_UNUSED(theme);
     // It's a screen
     if (lv_obj_get_parent(obj) == nullptr) {
         lv_obj_add_style(obj, &screen_style, 0);
+        return;
+    }
+    if (lv_obj_get_class(obj) == &hb_wifi_class) {
+        LV_LOG_ERROR("setting wifi style...");
+        lv_obj_add_style(obj, &wifi_style, LV_PART_MAIN);
     }
 }
 
@@ -25,6 +33,13 @@ void styles::init() {
     lv_style_init(&screen_style);
     lv_style_set_bg_color(&screen_style, lv_color_black());
     lv_style_set_bg_opa(&screen_style, LV_OPA_COVER);
+
+    // Set up the Wi-Fi style
+    lv_style_init(&wifi_style);
+    lv_style_set_arc_color(&wifi_style, lv_color_white());
+    lv_style_set_arc_opa(&wifi_style, LV_OPA_100);
+    // This is meaningless, but if it's not set we never set the colour either...
+    lv_style_set_arc_width(&wifi_style, 10);
 
     // Extend the default theme
     lv_theme_t *default_theme = lv_disp_get_theme(nullptr);
