@@ -19,6 +19,7 @@ class Controller {
     TaskHandle_t taskHandle = nullptr;
     adc_continuous_handle_t adcHandle = nullptr;
     adc_cali_handle_t caliHandle = nullptr;
+    int8_t lastLevel = 0;
 
 public:
     explicit Controller(const std::shared_ptr<lvgl_port::LVGLPort>& thePort);
