@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 #include <expected.hpp>
+#include <esp_timer.h>
 
 #include <eightsleep.h>
 
@@ -35,11 +36,17 @@ struct State {
 
 
 class StateManager {
+    static constexpr char const * TAG = "StateManager";
     State state;
     std::shared_ptr<eightsleep::Client> client;
 
     TaskHandle_t task = nullptr;
     QueueHandle_t queue = nullptr;
+
+    esp_timer_handle_t reauthTimerHandle;
+    esp_timer_handle_t stateUpdateTimerHandle;
+
+    std::function<void(const State&)> updateCallback = nullptr;
 
 public:
     explicit StateManager(const std::shared_ptr<eightsleep::Client>& client);
@@ -48,10 +55,14 @@ public:
     void setBedState(bool on);
     const State& getState();
     void updateBedState(std::function<void(rd::expected<const State*, std::string>)> cb);
+    void setUpdateCallback(std::function<void(const State&)> cb);
 
 private:
     void enqueue(std::function<void()> fn);
     [[noreturn]] static void taskLoop(void *param);
+
+    static void reauthTimerHandler(void *ctx);
+    static void bedStatusTimerHandler(void *ctx);
 };
 
 }

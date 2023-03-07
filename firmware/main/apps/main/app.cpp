@@ -3,6 +3,7 @@
 
 #include <esp_log.h>
 #include <wifi_widget.h>
+#include <fonts.h>
 
 namespace apps::main {
 
@@ -57,23 +58,22 @@ void App::showMainScreen() {
     port->setActiveGroup(group);
 
     lv_obj_t *screen = lv_obj_create(nullptr);
-    lv_obj_t *label = lv_label_create(screen);
+    tempLabel = lv_label_create(screen);
 
     lv_obj_add_event_cb(screen, [](lv_event_t* e) {
         ESP_LOGI("app", "Event! %d", e->code);
     }, LV_EVENT_KEY, nullptr);
 
-    lv_obj_t *arc = lv_arc_create(screen);
-    lv_obj_set_size(arc, 238, 238);
-    lv_arc_set_rotation(arc, 135);
-    lv_arc_set_bg_angles(arc, 0, 270);
-    lv_arc_set_range(arc, -10, 10);
-    lv_arc_set_value(arc, stateManager.getState().bedTargetTemp);
-    lv_obj_center(arc);
+    settingArc = lv_arc_create(screen);
+    lv_obj_set_size(settingArc, 238, 238);
+    lv_arc_set_rotation(settingArc, 135);
+    lv_arc_set_bg_angles(settingArc, 0, 270);
+    lv_arc_set_range(settingArc, -10, 10);
+    lv_obj_center(settingArc);
 
-    lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(settingArc, LV_OBJ_FLAG_CLICKABLE);
 
-    lv_obj_add_event_cb(arc, [](lv_event_t *event){
+    lv_obj_add_event_cb(settingArc, [](lv_event_t *event){
         auto lock = lvgl_port::Lock();
         uint32_t key = lv_event_get_key(event);
         if (key == LV_KEY_ENTER) {
@@ -84,20 +84,44 @@ void App::showMainScreen() {
                      lv_group_get_focused((lv_group_t *) lv_obj_get_group(arc)));
             lv_group_focus_obj(arc);
             lv_group_set_editing((lv_group_t *) lv_obj_get_group(arc), true);
+
+            // ...and also:
+            auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
+            app->stateManager.setBedState(!app->stateManager.getState().requestedState);
+            app->updateMainScreen();
         }
-    }, LV_EVENT_KEY, arc);
+    }, LV_EVENT_KEY, settingArc);
 
-    lv_label_set_text(label, "whee!");
-    lv_obj_center(label);
+    lv_obj_set_user_data(settingArc, this);
 
-    lv_obj_set_style_pad_all(arc, 0, LV_PART_KNOB);
-    lv_obj_set_style_arc_opa(arc, 0, LV_PART_INDICATOR);
+    lv_obj_add_event_cb(settingArc, [](lv_event_t *event) {
+        auto lock = lvgl_port::Lock();
+        int value = lv_arc_get_value(event->target);
+        auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
+        app->stateManager.setTargetTemp(value * 10);
+        app->updateMainScreen();
+    }, LV_EVENT_VALUE_CHANGED, settingArc);
 
-    lv_group_add_obj(group, arc);
-    lv_group_focus_obj(arc);
+    lv_obj_set_style_text_font(tempLabel, &montserrat_56_digits, 0);
+    lv_obj_center(tempLabel);
+
+    lv_obj_set_style_pad_all(settingArc, 0, LV_PART_KNOB);
+    lv_obj_set_style_arc_opa(settingArc, 0, LV_PART_INDICATOR);
+
+    lv_group_add_obj(group, settingArc);
+    lv_group_focus_obj(settingArc);
     lv_group_set_editing(group, true);
 
+    tempDescLabel = lv_label_create(screen);
+    lv_obj_set_style_text_font(tempDescLabel, &lv_font_montserrat_20, 0);
+    lv_obj_center(tempDescLabel);
+    lv_obj_set_pos(tempDescLabel, 0, 40);
+
     lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+    stateManager.setUpdateCallback([this](const State&) {
+       updateMainScreen();
+    });
+    updateMainScreen();
 }
 
 void App::showConnectionErrorScreen() {
@@ -120,6 +144,83 @@ void App::showFetchingStateScreen() {
     lv_obj_center(spinner);
 
     lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+}
+
+void App::updateMainScreen() {
+    auto lock = lvgl_port::Lock();
+    constexpr size_t maxLength = 4;
+    char text[maxLength] = {};
+    int temp = LV_CLAMP(-10, stateManager.getState().localTargetTemp / 10, 10);
+    if (!stateManager.getState().requestedState) {
+        strlcpy(text, "OFF", maxLength);
+    } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation" // GCC doesn't know this is clamped between -10 and +10.
+        snprintf(text, maxLength, "%+d", temp);
+#pragma GCC diagnostic pop
+    }
+    lv_label_set_text(tempLabel, text);
+    if (stateManager.getState().requestedState) {
+        lv_obj_set_style_opa(settingArc, LV_OPA_100, LV_PART_KNOB);
+        lv_arc_set_value(settingArc, temp);
+    } else {
+        lv_obj_set_style_opa(settingArc, LV_OPA_0, LV_PART_KNOB);
+    }
+
+    // Description mapping.
+    const char* descriptions[21] = {
+        "EXTREMELY COLD",
+        "EXTREMELY COLD",
+        "EXTREMELY COLD",
+        "VERY COLD",
+        "VERY COLD",
+        "VERY COLD",
+        "COLD",
+        "COLD",
+        "COOL",
+        "COOL",
+        "NEUTRAL",
+        "WARM",
+        "WARM",
+        "HOT",
+        "HOT",
+        "VERY HOT",
+        "VERY HOT",
+        "VERY HOT",
+        "EXTREMELY HOT",
+        "EXTREMELY HOT",
+        "EXTREMELY HOT",
+    };
+    const lv_color_t colors[21] = {
+        lv_color_hex(0x1862FF),
+        lv_color_hex(0x1862FF),
+        lv_color_hex(0x1862FF),
+        lv_color_hex(0x304BF6),
+        lv_color_hex(0x304BF6),
+        lv_color_hex(0x304BF6),
+        lv_color_hex(0x3744F3),
+        lv_color_hex(0x3744F3),
+        lv_color_hex(0x4C39F2),
+        lv_color_hex(0x4C39F2),
+        lv_color_hex(0x832EF5),
+        lv_color_hex(0xB91332),
+        lv_color_hex(0xB91332),
+        lv_color_hex(0xC31435),
+        lv_color_hex(0xC31435),
+        lv_color_hex(0xD01639),
+        lv_color_hex(0xD01639),
+        lv_color_hex(0xD01639),
+        lv_color_hex(0xE6183F),
+        lv_color_hex(0xE6183F),
+        lv_color_hex(0xE6183F),
+    };
+    if (stateManager.getState().requestedState) {
+        lv_label_set_text(tempDescLabel, descriptions[temp + 10]);
+        lv_obj_set_style_text_color(tempDescLabel, colors[temp + 10], 0);
+        lv_obj_set_style_bg_color(settingArc, colors[temp + 10], LV_PART_KNOB);
+    } else {
+        lv_label_set_text(tempDescLabel, "");
+    }
 }
 
 }

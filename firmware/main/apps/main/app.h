@@ -28,7 +28,13 @@ private:
     void showConnectingScreen();
     void showConnectionErrorScreen();
     void showMainScreen();
+    void updateMainScreen();
     void showFetchingStateScreen();
+
+    // main screen UI objects
+    lv_obj_t *settingArc = nullptr;
+    lv_obj_t *tempLabel = nullptr;
+    lv_obj_t *tempDescLabel = nullptr;
 };
 
 }

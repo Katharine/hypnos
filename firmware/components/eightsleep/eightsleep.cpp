@@ -193,9 +193,9 @@ void Client::getBedStatus(const std::function<void(rd::expected<Bed, std::string
         });
     };
     if (!deviceId.empty()) {
-        ESP_LOGI(TAG, "Fetching device ID before trying to fetch device info...");
         doWork(deviceId);
     } else {
+        ESP_LOGI(TAG, "Fetching device ID before trying to fetch device info...");
         getDeviceId(std::move(doWork));
     }
 }
