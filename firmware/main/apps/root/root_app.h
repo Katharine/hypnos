@@ -10,6 +10,7 @@
 #include <wifi.h>
 #include <hypnos_config.h>
 #include <eightsleep.h>
+#include <backlight.h>
 #include "../base_app.h"
 
 namespace apps::root {
@@ -20,6 +21,7 @@ class RootApp {
     std::shared_ptr<hypnos_config::HypnosConfig> config;
     std::shared_ptr<eightsleep::Client> client;
     std::unique_ptr<apps::BaseApp> active_app;
+    std::unique_ptr<backlight::Controller> backlight;
 
 public:
     void init();

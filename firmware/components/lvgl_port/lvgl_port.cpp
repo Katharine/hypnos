@@ -6,6 +6,8 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_gc9a01.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include <utility>
 
@@ -115,7 +117,7 @@ void LVGLPort::configureBacklight() {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_12_BIT,
         .timer_num = LEDC_TIMER_0,
-        .freq_hz = 8192,
+        .freq_hz = 4096,
         .clk_cfg = LEDC_AUTO_CLK,
     };
     ESP_ERROR_CHECK(ledc_timer_config(&timer_config));
@@ -126,13 +128,18 @@ void LVGLPort::configureBacklight() {
         .channel = LEDC_CHANNEL_0,
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = LEDC_TIMER_0,
-        .duty = 8192,
+        .duty = 0,
         .hpoint = 0,
     };
     ESP_ERROR_CHECK(ledc_channel_config(&channel_config));
 }
 
 void LVGLPort::setBacklight(int level) {
+    if (level == last_brightness) {
+        return;
+    }
+    last_brightness = level;
+    ESP_LOGI(TAG, "Updating backlight brightness to %d", level);
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, level));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
 }
@@ -140,6 +147,14 @@ void LVGLPort::setBacklight(int level) {
 
 void LVGLPort::setActiveGroup(lv_group_t *group) {
     lv_indev_set_group(indev, group);
+}
+
+void LVGLPort::resetDisplay() {
+    // TODO: Is this the same as esp_lcd_panel_reset()?
+    gpio_set_level(static_cast<gpio_num_t>(CONFIG_PORT_DISPLAY_RESET), 0);
+    vTaskDelay(1);
+    gpio_set_level(static_cast<gpio_num_t>(CONFIG_PORT_DISPLAY_RESET), 1);
+    ESP_LOGI(TAG, "Reset display");
 }
 
 Lock::Lock() {

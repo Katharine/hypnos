@@ -18,12 +18,14 @@
 namespace apps::root {
 
 void RootApp::init() {
+    lvgl_port::LVGLPort::resetDisplay();
     ESP_LOGI("wifi", "Initialising NVS...");
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_LOGI("wifi", "Initialising event loop...");
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     port = std::make_shared<lvgl_port::LVGLPort>();
+    backlight = std::make_unique<backlight::Controller>(port);
     wifi = std::make_shared<wifi::WiFi>();
     config = std::make_shared<hypnos_config::HypnosConfig>();
     client = std::make_shared<eightsleep::Client>();

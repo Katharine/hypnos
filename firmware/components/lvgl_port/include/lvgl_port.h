@@ -8,6 +8,7 @@
 namespace lvgl_port {
 
 class LVGLPort {
+    static constexpr char const * TAG = "LVGLPort";
 
     lv_indev_drv_t indev_drv;
     lv_indev_t *indev;
@@ -17,6 +18,8 @@ class LVGLPort {
     esp_lcd_panel_handle_t panel;
     lv_disp_t *disp;
 
+    int last_brightness = -1;
+
     bool has_gone = false;
 
 public:
@@ -24,10 +27,10 @@ public:
     static const int DISPLAY_HEIGHT = 240;
 
     LVGLPort();
-    LVGLPort(LVGLPort &&other) noexcept;
     ~LVGLPort();
     void setActiveGroup(lv_group_t *group);
     void setBacklight(int level);
+    static void resetDisplay();
 
 private:
     void configureScreen();
