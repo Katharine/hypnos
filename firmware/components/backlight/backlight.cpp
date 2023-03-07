@@ -101,7 +101,7 @@ void Controller::updateBacklight(int raw, int millivolts) {
     } else if ((lastLevel >= 2 && millivolts >= 700) || millivolts >= 800) {
         lastLevel = 2;
         port->setBacklight(1024); // 50% brightness
-    } else if ((lastLevel >= 1 && millivolts >= 7) || millivolts >= 10) {
+    } else if ((lastLevel >= 1 && millivolts >= 7) || millivolts >= 30) {
         lastLevel = 1;
         port->setBacklight(410); // 10% brightness
     } else {
