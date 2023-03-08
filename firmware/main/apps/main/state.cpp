@@ -47,9 +47,25 @@ StateManager::StateManager(const std::shared_ptr<eightsleep::Client>& client) {
     };
     esp_timer_create(&args, &stateUpdateTimerHandle);
     esp_timer_start_periodic(stateUpdateTimerHandle, 60 * 1000000); // 1 minute in microseconds
+
+    args = {
+        .callback = &StateManager::handleUpdatePendingTimer,
+        .arg = this,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "updateDebounce",
+        .skip_unhandled_events = false,
+    };
+    esp_timer_create(&args, &updatePendingHandle);
+    // We don't start this one here - we'll start it elsewhere.
 }
 
 StateManager::~StateManager() {
+    esp_timer_stop(reauthTimerHandle);
+    esp_timer_stop(stateUpdateTimerHandle);
+    esp_timer_stop(updatePendingHandle);
+    esp_timer_delete(reauthTimerHandle);
+    esp_timer_delete(stateUpdateTimerHandle);
+    esp_timer_delete(updatePendingHandle);
     vTaskDelete(task);
     vQueueDelete(queue);
 }
@@ -120,6 +136,97 @@ const State &StateManager::getState() {
     return state;
 }
 
+void StateManager::setUpdateCallback(std::function<void(const State&)> cb) {
+    updateCallback = std::move(cb);
+}
+
+void StateManager::setTargetTemp(int target) {
+    state.localTargetTemp = target;
+    setUpdatePendingTimer();
+}
+
+void StateManager::setBedState(bool on) {
+    state.requestedState = on;
+    setUpdatePendingTimer();
+}
+
+void StateManager::setUpdatePendingTimer() {
+    esp_timer_stop(updatePendingHandle);
+    esp_timer_start_once(updatePendingHandle, 5 * 1000000); // Five seconds after last change.
+}
+
+void StateManager::syncStateToServer() {
+    if (serverUpdatePending) {
+        ESP_LOGI(TAG, "Skipped sync to server: already working on it");
+        return;
+    }
+    if (state.localTargetTemp == state.bedTargetTemp && state.requestedState == state.bedState) {
+        ESP_LOGI(TAG, "Skipped sync to server: we don't think we need to change anything");
+        return;
+    }
+    ESP_LOGI(TAG, "Syncing updates to server...");
+    serverUpdatePending = true;
+    std::function<void()> updateTemp = nullptr;
+    if (state.localTargetTemp != state.bedTargetTemp) {
+        updateTemp = [this]() {
+            client->setTemp(state.localTargetTemp, [this](rd::expected<eightsleep::Bed, std::string> result) {
+                if (!result) {
+                    ESP_LOGW(TAG, "Temperature update failed: %s", result.error().c_str());
+                    state.localTargetTemp = state.bedTargetTemp;
+                    state.requestedState = state.bedState;
+                    serverUpdatePending = false;
+                    if (updateCallback) {
+                        updateCallback(state);
+                    }
+                    return;
+                }
+                ESP_LOGI(TAG, "Temperature update complete.");
+                recheckState(result.value());
+            });
+        };
+    }
+    if (state.bedState != state.requestedState) {
+        client->setBedState(state.requestedState, [this, updateTemp](rd::expected<eightsleep::Bed, std::string> result) {
+            if (!result) {
+                ESP_LOGW(TAG, "State update failed: %s", result.error().c_str());
+                state.localTargetTemp = state.bedTargetTemp;
+                state.requestedState = state.bedState;
+                serverUpdatePending = false;
+                if (updateCallback) {
+                    updateCallback(state);
+                }
+                return;
+            }
+            ESP_LOGI(TAG, "State update complete.");
+            if (updateTemp) {
+                updateTemp();
+            } else {
+                recheckState(result.value());
+            }
+        });
+    } else if (updateTemp) {
+        updateTemp();
+    } else {
+        // This should be impossible.
+        ESP_LOGE(TAG, "Reached unreachable code for serverUpdatePending.");
+        serverUpdatePending = false;
+    }
+}
+
+void StateManager::recheckState(const eightsleep::Bed &newState) {
+    enqueue([=]() {
+        state.bedTargetTemp = newState.targetTemp;
+        state.bedState = newState.active;
+        state.bedActualTemp = newState.currentTemp;
+
+        serverUpdatePending = false;
+        if ((state.requestedState && state.localTargetTemp != state.bedTargetTemp) || state.requestedState != state.bedState) {
+            ESP_LOGI(TAG, "States still don't match, requesting another update.");
+            setUpdatePendingTimer();
+        }
+    });
+}
+
 void StateManager::reauthTimerHandler(void *ctx) {
     auto *manager = static_cast<StateManager*>(ctx);
     manager->enqueue([manager]() {
@@ -133,32 +240,9 @@ void StateManager::bedStatusTimerHandler(void *ctx) {
     manager->updateBedState(nullptr);
 }
 
-void StateManager::setUpdateCallback(std::function<void(const State&)> cb) {
-    updateCallback = std::move(cb);
-}
-
-void StateManager::setTargetTemp(int target) {
-    state.localTargetTemp = target;
-    // TODO: tell the bed about this development.
-//    if (updateCallback) {
-//        enqueue([this]() {
-//            if (updateCallback) {
-//                updateCallback(state);
-//            }
-//        });
-//    }
-}
-
-void StateManager::setBedState(bool on) {
-    state.requestedState = on;
-    // TODO: tell the bed about this development.
-//    if (updateCallback) {
-//        enqueue([this]() {
-//            if (updateCallback) {
-//                updateCallback(state);
-//            }
-//        });
-//    }
+void StateManager::handleUpdatePendingTimer(void *ctx) {
+    auto *manager = static_cast<StateManager*>(ctx);
+    manager->enqueue([manager]() { manager->syncStateToServer(); });
 }
 
 }

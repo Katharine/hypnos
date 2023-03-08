@@ -39,12 +39,14 @@ class StateManager {
     static constexpr char const * TAG = "StateManager";
     State state;
     std::shared_ptr<eightsleep::Client> client;
+    bool serverUpdatePending = false;
 
     TaskHandle_t task = nullptr;
     QueueHandle_t queue = nullptr;
 
     esp_timer_handle_t reauthTimerHandle;
     esp_timer_handle_t stateUpdateTimerHandle;
+    esp_timer_handle_t updatePendingHandle;
 
     std::function<void(const State&)> updateCallback = nullptr;
 
@@ -56,13 +58,17 @@ public:
     const State& getState();
     void updateBedState(std::function<void(rd::expected<const State*, std::string>)> cb);
     void setUpdateCallback(std::function<void(const State&)> cb);
+    void recheckState(const eightsleep::Bed& newState);
 
 private:
     void enqueue(std::function<void()> fn);
-    [[noreturn]] static void taskLoop(void *param);
+    void setUpdatePendingTimer();
+    void syncStateToServer();
 
+    [[noreturn]] static void taskLoop(void *param);
     static void reauthTimerHandler(void *ctx);
     static void bedStatusTimerHandler(void *ctx);
+    static void handleUpdatePendingTimer(void *ctx);
 };
 
 }

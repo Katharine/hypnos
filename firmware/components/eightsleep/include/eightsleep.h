@@ -41,8 +41,15 @@ public:
 
     void getBedStatus(const std::function<void(rd::expected<Bed, std::string>)>& cb);
 
+    /// Turn the bed on (true) or off (false). Actually turns the bed on for up to 20 hours.
+    void setBedState(bool on, const std::function<void(rd::expected<Bed, std::string>)>& cb);
+
+    /// Set the temperature of the bed (in weird Eight Sleep "level" units)
+    void setTemp(int temp, const std::function<void(rd::expected<Bed, std::string>)>& cb);
+
 private:
     void getDeviceId(const std::function<void(rd::expected<std::string, std::string>)>& cb);
+    rd::expected<Bed, std::string> parseBedResult(const DynamicJsonDocument& doc);
 };
 
 }

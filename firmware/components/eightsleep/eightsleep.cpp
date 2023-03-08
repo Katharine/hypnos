@@ -176,19 +176,7 @@ void Client::getBedStatus(const std::function<void(rd::expected<Bed, std::string
                     cb(rd::unexpected(result.error()));
                     return;
                 }
-                // I have no idea why this is referred to as "kelvin" all the time. That's not the actual unit.
-                // (in fact, these are just in mysterious "levels").
-                JsonObject kelvin = result.value()["result"][bedSide + "Kelvin"];
-                if (kelvin.isNull()) {
-                    cb(rd::unexpected("Request made, but no data returned."));
-                    return;
-                }
-                Bed bed = {
-                    .currentTemp = kelvin["level"].as<int>(),
-                    .targetTemp = kelvin["currentTargetLevel"].as<int>(),
-                    .active = kelvin["active"].as<bool>(),
-                };
-                cb(bed);
+                cb(parseBedResult(result.value()));
             },
         });
     };
@@ -196,6 +184,91 @@ void Client::getBedStatus(const std::function<void(rd::expected<Bed, std::string
         doWork(deviceId);
     } else {
         ESP_LOGI(TAG, "Fetching device ID before trying to fetch device info...");
+        getDeviceId(std::move(doWork));
+    }
+}
+
+rd::expected<Bed, std::string> Client::parseBedResult(const DynamicJsonDocument& doc) {
+    // I have no idea why this is referred to as "kelvin" all the time. That's not the actual unit.
+    // (in fact, these are just in mysterious "levels").
+    JsonVariantConst obj;
+    if (doc.containsKey("device")) {
+        obj = doc["device"];
+    } else if (doc.containsKey("result")) {
+        obj = doc["result"];
+    } else {
+        obj = doc.as<JsonVariantConst>();
+    }
+    JsonObjectConst kelvin = obj[bedSide + "Kelvin"];
+    if (kelvin.isNull()) {
+        return rd::unexpected("Request made, but no data returned.");
+    }
+    return Bed{
+        .currentTemp = kelvin["level"].as<int>(),
+        .targetTemp = kelvin["currentTargetLevel"].as<int>(),
+        .active = kelvin["active"].as<bool>(),
+    };
+}
+
+void Client::setBedState(bool on, const std::function<void(rd::expected<Bed, std::string>)> &cb) {
+    auto doWork = [=, this](rd::expected<std::string, std::string> input) {
+        if (!input) {
+            ESP_LOGE(TAG, "Can't fetch device info: %s.", input.error().c_str());
+            cb(rd::unexpected(input.error()));
+            return;
+        }
+        int duration = on ? 72000 : 0;
+        ESP_LOGI(TAG, "Setting bed duration to %d", duration);
+        client.makeLegacyRequest({
+            .url = "https://client-api.8slp.net/v1/devices/" + deviceId,
+            .method = HTTP_METHOD_PUT,
+            .json_doc_size = 4096,
+            .payload = "{\"" + bedSide + "HeatingDuration\": " + std::to_string(duration) + "}",
+            .content_type = "application/json",
+            .callback = [=, this](rd::expected<DynamicJsonDocument, std::string> result) {
+                if (!result) {
+                    cb(rd::unexpected(result.error()));
+                    return;
+                }
+                cb(parseBedResult(result.value()));
+            },
+        });
+    };
+    if (!deviceId.empty()) {
+        doWork(deviceId);
+    } else {
+        ESP_LOGI(TAG, "Fetching device ID before trying to set bed state...");
+        getDeviceId(std::move(doWork));
+    }
+}
+
+void Client::setTemp(int temp, const std::function<void(rd::expected<Bed, std::string>)> &cb) {
+    auto doWork = [=, this](rd::expected<std::string, std::string> input) {
+        if (!input) {
+            ESP_LOGE(TAG, "Can't fetch device info: %s.", input.error().c_str());
+            cb(rd::unexpected(input.error()));
+            return;
+        }
+        ESP_LOGI(TAG, "Setting bed temp to %d", temp);
+        client.makeLegacyRequest({
+            .url = "https://client-api.8slp.net/v1/devices/" + deviceId,
+            .method = HTTP_METHOD_PUT,
+            .json_doc_size = 4096,
+            .payload = "{\"" + bedSide + "TargetHeatingLevel\": " + std::to_string(temp) + "}",
+            .content_type = "application/json",
+            .callback = [=, this](rd::expected<DynamicJsonDocument, std::string> result) {
+                if (!result) {
+                    cb(rd::unexpected(result.error()));
+                    return;
+                }
+                cb(parseBedResult(result.value()));
+            },
+        });
+    };
+    if (!deviceId.empty()) {
+        doWork(deviceId);
+    } else {
+        ESP_LOGI(TAG, "Fetching device ID before trying to set bed temperature...");
         getDeviceId(std::move(doWork));
     }
 }

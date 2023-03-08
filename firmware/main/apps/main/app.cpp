@@ -98,8 +98,10 @@ void App::showMainScreen() {
         auto lock = lvgl_port::Lock();
         int value = lv_arc_get_value(event->target);
         auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
-        app->stateManager.setTargetTemp(value * 10);
-        app->updateMainScreen();
+        if (app->stateManager.getState().requestedState) {
+            app->stateManager.setTargetTemp(value * 10);
+            app->updateMainScreen();
+        }
     }, LV_EVENT_VALUE_CHANGED, settingArc);
 
     lv_obj_set_style_text_font(tempLabel, &montserrat_56_digits, 0);
