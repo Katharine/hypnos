@@ -17,7 +17,7 @@ static std::unique_ptr<apps::root::RootApp> app;
      sntp_setservername(0, "time.apple.com");
      sntp_set_time_sync_notification_cb([](struct timeval *tv) {
          ESP_LOGI("app", "time sync! %d", sntp_get_sync_status());
-         ESP_LOGI("app", "Current time: %lld", time(nullptr));
+         ESP_LOGI("app", "Current time: %ld", static_cast<uint32_t>(time(nullptr)));
      });
      sntp_init();
 
