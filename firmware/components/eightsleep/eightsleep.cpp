@@ -212,16 +212,13 @@ void Client::getBedStatus(const std::function<void(rd::expected<Bed, std::string
 rd::expected<Bed, std::string> Client::parseBedResult(const DynamicJsonDocument& doc) {
     // I have no idea why this is referred to as "kelvin" all the time. That's not the actual unit.
     // (in fact, these are just in mysterious "levels").
-    JsonVariantConst obj;
-    if (doc.containsKey("device")) {
-        obj = doc["device"];
-    } else if (doc.containsKey("result")) {
-        obj = doc["result"];
+    JsonVariantConst kelvin;
+    if (doc.containsKey("result")) {
+        kelvin = doc["result"][bedSide + "Kelvin"];
     } else {
-        obj = doc.as<JsonVariantConst>();
+        kelvin = doc.as<JsonVariantConst>();
     }
-    JsonObjectConst kelvin = obj[bedSide + "Kelvin"];
-    if (kelvin.isNull()) {
+    if (kelvin.isNull() || !kelvin.containsKey("level") || !kelvin.containsKey("currentTargetLevel") || !kelvin.containsKey("active")) {
         return rd::unexpected("Request made, but no data returned.");
     }
     return Bed{
@@ -241,11 +238,9 @@ void Client::setBedState(bool on, const std::function<void(rd::expected<Bed, std
         int duration = on ? 72000 : 0;
         ESP_LOGI(TAG, "Setting bed duration to %d", duration);
         client.makeLegacyRequest({
-            .url = "https://client-api.8slp.net/v1/devices/" + deviceId,
+            .url = "https://client-api.8slp.net/v1/devices/" + deviceId + "/" + bedSide + "/duration/" + std::to_string(duration),
             .method = HTTP_METHOD_PUT,
-            .json_doc_size = 4096,
-            .payload = "{\"" + bedSide + "HeatingDuration\": " + std::to_string(duration) + "}",
-            .content_type = "application/json",
+            .json_doc_size = 768,
             .callback = [=, this](rd::expected<DynamicJsonDocument, std::string> result) {
                 if (!result) {
                     cb(rd::unexpected(result.error()));
@@ -272,11 +267,9 @@ void Client::setTemp(int temp, const std::function<void(rd::expected<Bed, std::s
         }
         ESP_LOGI(TAG, "Setting bed temp to %d", temp);
         client.makeLegacyRequest({
-            .url = "https://client-api.8slp.net/v1/devices/" + deviceId,
+            .url = "https://client-api.8slp.net/v1/devices/" + deviceId + "/" + bedSide + "/level/" + std::to_string(temp),
             .method = HTTP_METHOD_PUT,
-            .json_doc_size = 4096,
-            .payload = "{\"" + bedSide + "TargetHeatingLevel\": " + std::to_string(temp) + "}",
-            .content_type = "application/json",
+            .json_doc_size = 768,
             .callback = [=, this](rd::expected<DynamicJsonDocument, std::string> result) {
                 if (!result) {
                     cb(rd::unexpected(result.error()));
