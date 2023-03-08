@@ -19,6 +19,7 @@ Client::Client(const std::string &url) {
     esp_http_client_config_t config = {
         .url = url.c_str(),
         .event_handler = &Client::handleEvent,
+        .buffer_size_tx = 2048,
         .user_data = this,
         .is_async = true,
         .crt_bundle_attach = esp_crt_bundle_attach,
@@ -36,9 +37,9 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI("http", "Data received: %d bytes", evt->data_len);
             if (client->response.capacity() == 0) {
-                size_t length = esp_http_client_get_content_length(evt->client);
+                int64_t length = esp_http_client_get_content_length(evt->client);
                 if (length > 0) {
-                    ESP_LOGI("http", "Allocating %d bytes for data", length);
+                    ESP_LOGI("http", "Allocating %d bytes for data", (int)length);
                     client->response.reserve(length);
                 }
             }

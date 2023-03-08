@@ -30,10 +30,11 @@ struct State {
     bool bedState = false;
     bool requestedState = false;
     bool apiReachable = false;
+    bool isAlarming = false;
     bool valid = false;
+    time_t nextAlarm = 0;
     Units units = Units::EightSleep;
 };
-
 
 class StateManager {
     static constexpr char const * TAG = "StateManager";
@@ -46,7 +47,10 @@ class StateManager {
 
     esp_timer_handle_t reauthTimerHandle;
     esp_timer_handle_t stateUpdateTimerHandle;
+    esp_timer_handle_t regularAlarmUpdateTimerHandle;
+    esp_timer_handle_t expectedAlarmTimerHandle;
     esp_timer_handle_t updatePendingHandle;
+    esp_timer_handle_t stillAlarmingPollHandle;
 
     std::function<void(const State&)> updateCallback = nullptr;
 
@@ -57,18 +61,27 @@ public:
     void setBedState(bool on);
     const State& getState();
     void updateBedState(std::function<void(rd::expected<const State*, std::string>)> cb);
+    void updateAlarmSchedule(const std::function<void(rd::expected<bool, std::string>)>& cb);
     void setUpdateCallback(std::function<void(const State&)> cb);
     void recheckState(const eightsleep::Bed& newState);
+    void stopAlarm(std::function<void(rd::expected<bool, std::string>)> cb);
 
 private:
     void enqueue(std::function<void()> fn);
     void setUpdatePendingTimer();
     void syncStateToServer();
+    void enterAlarmMode();
+    void pollActiveAlarm();
+    void handleTimeChange();
 
     [[noreturn]] static void taskLoop(void *param);
     static void reauthTimerHandler(void *ctx);
     static void bedStatusTimerHandler(void *ctx);
     static void handleUpdatePendingTimer(void *ctx);
+    static void alarmScheduleUpdateHandler(void *ctx);
+    static void alarmExpectedHandler(void *ctx);
+    static void alarmOngoingPollHandler(void *ctx);
+    static time_t parseTimeString(std::string str);
 };
 
 }

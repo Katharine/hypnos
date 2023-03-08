@@ -10,12 +10,21 @@
 
 namespace apps::main {
 
+enum struct Screen {
+    Connecting,
+    ConnectionError,
+    FetchingState,
+    Main,
+    Alarm,
+};
+
 class App : public BaseApp {
     std::shared_ptr<lvgl_port::LVGLPort> port;
     std::shared_ptr<wifi::WiFi> wifi;
     std::shared_ptr<hypnos_config::HypnosConfig> config;
     std::unique_ptr<config_server::Server> server;
     std::shared_ptr<eightsleep::Client> client;
+    Screen currentScreen;
 
     StateManager stateManager;
 
@@ -28,7 +37,9 @@ private:
     void showConnectingScreen();
     void showConnectionErrorScreen();
     void showMainScreen();
+    void showAlarmScreen();
     void updateMainScreen();
+    void handleStateUpdate(const State& state);
     void showFetchingStateScreen();
 
     // main screen UI objects

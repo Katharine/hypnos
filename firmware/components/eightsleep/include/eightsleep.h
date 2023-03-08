@@ -36,6 +36,9 @@ public:
     /// Fetches a vector of alarms that the user has set. May fail if the user has set too many alarms.
     void getAlarms(const std::function<void(rd::expected<std::vector<Alarm>, std::string>)>& alarmResult);
 
+    /// Fetches a vector of alarms that the user has set. May fail if the user has set too many alarms.
+    void hasActiveAlarm(const std::function<void(rd::expected<bool, std::string>)>& cb);
+
     /// Stops any active alarms.
     void stopAlarms(std::function<void(bool)> cb);
 

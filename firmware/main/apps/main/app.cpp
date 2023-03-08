@@ -27,9 +27,17 @@ void App::staConnectCallback(bool connected) {
                stateManager.updateBedState([this](rd::expected<const State*, std::string> result) {
                    if (!result) {
                        ESP_LOGE("app", "Couldn't update state: %s", result.error().c_str());
+                       showConnectionErrorScreen();
                        return;
                    }
-                   showMainScreen();
+                   stateManager.updateAlarmSchedule([this](rd::expected<bool, std::string> alarmResult) {
+                       if (!alarmResult) {
+                           ESP_LOGE("app", "Couldn't update alarms: %s", alarmResult.error().c_str());
+                           showConnectionErrorScreen();
+                           return;
+                       }
+                       showMainScreen();
+                   });
                });
            } else {
                showConnectionErrorScreen();
@@ -42,16 +50,18 @@ void App::staConnectCallback(bool connected) {
 
 void App::showConnectingScreen() {
     auto lock = lvgl_port::Lock();
+    currentScreen = Screen::Connecting;
 
     lv_obj_t *screen = lv_obj_create(nullptr);
     lv_obj_t *wifi_icon = hb_wifi_create(screen);
     lv_obj_center(wifi_icon);
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
 }
 
 void App::showMainScreen() {
     auto lock = lvgl_port::Lock();
+    currentScreen = Screen::Main;
 
     lv_group_t *group = lv_group_create();
     lv_group_set_default(group);
@@ -74,6 +84,10 @@ void App::showMainScreen() {
     lv_obj_clear_flag(settingArc, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_add_event_cb(settingArc, [](lv_event_t *event){
+        auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
+        if (app->currentScreen != Screen::Main) {
+            return;
+        }
         auto lock = lvgl_port::Lock();
         uint32_t key = lv_event_get_key(event);
         if (key == LV_KEY_ENTER) {
@@ -86,7 +100,6 @@ void App::showMainScreen() {
             lv_group_set_editing((lv_group_t *) lv_obj_get_group(arc), true);
 
             // ...and also:
-            auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
             app->stateManager.setBedState(!app->stateManager.getState().requestedState);
             app->updateMainScreen();
         }
@@ -95,9 +108,12 @@ void App::showMainScreen() {
     lv_obj_set_user_data(settingArc, this);
 
     lv_obj_add_event_cb(settingArc, [](lv_event_t *event) {
+        auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
+        if (app->currentScreen != Screen::Main) {
+            return;
+        }
         auto lock = lvgl_port::Lock();
         int value = lv_arc_get_value(event->target);
-        auto *app = static_cast<App *>(lv_obj_get_user_data(event->target));
         if (app->stateManager.getState().requestedState) {
             app->stateManager.setTargetTemp(value * 10);
             app->updateMainScreen();
@@ -119,37 +135,57 @@ void App::showMainScreen() {
     lv_obj_center(tempDescLabel);
     lv_obj_set_pos(tempDescLabel, 0, 40);
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
-    stateManager.setUpdateCallback([this](const State&) {
-       updateMainScreen();
+    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
+    stateManager.setUpdateCallback([this](const State& state) {
+        handleStateUpdate(state);
     });
     updateMainScreen();
 }
 
+void App::handleStateUpdate(const State& state) {
+    if (state.isAlarming) {
+        if (currentScreen != Screen::Alarm && currentScreen != Screen::FetchingState) {
+            showAlarmScreen();
+            return;
+        }
+    } else {
+        if (currentScreen != Screen::Main) {
+            showMainScreen();
+            return;
+        }
+        updateMainScreen();
+    }
+}
+
 void App::showConnectionErrorScreen() {
     auto lock = lvgl_port::Lock();
+    currentScreen = Screen::ConnectionError;
 
     lv_obj_t *screen = lv_obj_create(nullptr);
     lv_obj_t *label = lv_label_create(screen);
     lv_label_set_text(label, "Connection error.");
     lv_obj_center(label);
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
 }
 
 void App::showFetchingStateScreen() {
     auto lock = lvgl_port::Lock();
+    currentScreen = Screen::FetchingState;
 
     lv_obj_t *screen = lv_obj_create(nullptr);
 
     lv_obj_t *spinner = lv_spinner_create(screen, 1000, 40);
     lv_obj_center(spinner);
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 100, 0, true);
+    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
 }
 
 void App::updateMainScreen() {
     auto lock = lvgl_port::Lock();
+    if (currentScreen != Screen::Main) {
+        return;
+    }
     constexpr size_t maxLength = 4;
     char text[maxLength] = {};
     int temp = LV_CLAMP(-10, stateManager.getState().localTargetTemp / 10, 10);
@@ -225,6 +261,48 @@ void App::updateMainScreen() {
     } else {
         lv_label_set_text(tempDescLabel, "");
     }
+}
+
+void App::showAlarmScreen() {
+    auto lock = lvgl_port::Lock();
+    currentScreen = Screen::Alarm;
+
+    lv_obj_t *screen = lv_obj_create(nullptr);
+    lv_obj_t *label = lv_label_create(screen);
+    lv_label_set_text(label, "ALARM");
+    lv_obj_set_style_text_font(label, &montserrat_56_digits, 0);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, -20);
+
+    lv_group_t *group = lv_group_create();
+
+    lv_obj_t *button = lv_btn_create(screen);
+    lv_obj_align(button, LV_ALIGN_CENTER, 0, 50);
+    lv_group_add_obj(group, button);
+    port->setActiveGroup(group);
+
+    lv_obj_t *buttonLabel = lv_label_create(button);
+    lv_label_set_text(buttonLabel, "Dismiss");
+    lv_obj_center(buttonLabel);
+
+    lv_obj_add_event_cb(button, [](lv_event_t *event) {
+        auto lock = lvgl_port::Lock();
+        auto app = static_cast<App*>(event->user_data);
+        if (app->currentScreen != Screen::Alarm) {
+            return;
+        }
+        app->showFetchingStateScreen();
+        app->stateManager.stopAlarm([app](rd::expected<bool, std::string> result) {
+            auto lock = lvgl_port::Lock();
+            if (!result) {
+                app->showAlarmScreen();
+            } else {
+                app->showMainScreen();
+            }
+        });
+
+    }, LV_EVENT_RELEASED, this);
+
+    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
 }
 
 }

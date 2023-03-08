@@ -113,6 +113,27 @@ void Client::getAlarms(const std::function<void(rd::expected<std::vector<Alarm>,
     });
 }
 
+void Client::hasActiveAlarm(const std::function<void(rd::expected<bool, std::string>)> &cb) {
+    if (!client.auth.user_id) {
+        cb(rd::unexpected("user is not logged in"));
+        return;
+    }
+    client.makeOauthRequest({
+        .url = "https://app-api.8slp.net/v1/users/" + *client.auth.user_id + "/alarms/active",
+        .method = HTTP_METHOD_GET,
+        .json_doc_size = 4096,
+        .callback = [=, this](rd::expected<DynamicJsonDocument, std::string> alarmResult) {
+            if (!alarmResult) {
+                cb(rd::unexpected("fetching alarms failed: " + alarmResult.error()));
+                return;
+            }
+            // If there's an "alarm" key (singular), then an alarm is currently going off.
+            // The "alarms" key (plural) is always present but is irrelevant and always empty.
+            cb(alarmResult->containsKey("alarm"));
+        },
+    });
+}
+
 void Client::stopAlarms(std::function<void(bool)> cb) {
     if (!client.auth.user_id || !client.auth.oauth_token) {
         cb(false);

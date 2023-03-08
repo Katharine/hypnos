@@ -75,10 +75,13 @@ void ApiClient::makeOauthRequest(const RequestParams& params) {
             return;
         }
         DynamicJsonDocument doc(params.json_doc_size);
-        DeserializationError error = deserializeJson(doc, response.body);
-        if (error) {
-            params.callback(rd::unexpected("JSON decode failed: "s + error.c_str()));
-            return;
+        // No response at all is a success as far as we're concerned.
+        if (!response.body.empty()) {
+            DeserializationError error = deserializeJson(doc, response.body);
+            if (error) {
+                params.callback(rd::unexpected("JSON decode failed: "s + error.c_str()));
+                return;
+            }
         }
         params.callback(std::move(doc));
     });
