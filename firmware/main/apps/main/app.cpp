@@ -153,6 +153,8 @@ void App::updateMainScreen() {
     int temp = LV_CLAMP(-10, stateManager.getState().localTargetTemp / 10, 10);
     if (!stateManager.getState().requestedState) {
         strlcpy(text, "OFF", maxLength);
+    } else if (temp == 0) {
+        text[0] = '0';
     } else {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-truncation" // GCC doesn't know this is clamped between -10 and +10.
