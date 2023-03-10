@@ -63,7 +63,9 @@ void Client::authenticate(const std::function<void(bool)>& cb) {
                     }
                     client.auth.oauth_token = exchangeResult.value()["access_token"].as<std::string>();
                     ESP_LOGI(TAG, "Authentication complete.");
-                    cb(true);
+                    if (cb) {
+                        cb(true);
+                    }
                 },
            });
        },

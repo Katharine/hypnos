@@ -210,10 +210,11 @@ void StateManager::setUpdatePendingTimer() {
 
 void StateManager::stopAlarm(std::function<void(rd::expected<bool, std::string>)> cb) {
     enqueue([cb, this]() {
-        client->stopAlarms([cb](bool result) {
+        client->stopAlarms([cb, this](bool result) {
             if (!result) {
                 cb(rd::unexpected("stopping alarm failed for some reason"));
             } else {
+                state.isAlarming = false;
                 cb(true);
             }
         });
