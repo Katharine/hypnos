@@ -18,6 +18,7 @@ struct Response {
 typedef std::function<void(bool,Response)> Callback;
 
 class Client {
+    static constexpr const char* TAG = "http_cxx";
 public:
     Client();
     explicit Client(const std::string& url);

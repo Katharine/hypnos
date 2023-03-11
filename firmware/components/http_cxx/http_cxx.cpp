@@ -35,11 +35,11 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
     auto *client = static_cast<Client*>(evt->user_data);
     switch(evt->event_id) {
         case HTTP_EVENT_ON_DATA:
-            ESP_LOGI("http", "Data received: %d bytes", evt->data_len);
+            ESP_LOGI(TAG, "Data received: %d bytes", evt->data_len);
             if (client->response.capacity() == 0) {
                 int64_t length = esp_http_client_get_content_length(evt->client);
                 if (length > 0) {
-                    ESP_LOGI("http", "Allocating %d bytes for data", (int)length);
+                    ESP_LOGI(TAG, "Allocating %d bytes for data", (int)length);
                     client->response.reserve(length);
                 }
             }
@@ -51,7 +51,7 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
             client->incomingHeaders[evt->header_key] = evt->header_value;
             break;
         case HTTP_EVENT_ON_FINISH: {
-            ESP_LOGI("http", "Finished. Preparing callback...");
+            ESP_LOGI(TAG, "Finished. Preparing callback...");
             Response resp = {
                 .body = std::string(client->response.data(), client->response.size()),
                 .status_code = esp_http_client_get_status_code(evt->client),
@@ -61,7 +61,7 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
             std::vector<char>().swap(client->response);
             client->incomingHeaders.clear();
             if (client->callback) {
-                ESP_LOGI("http", "Calling back.");
+                ESP_LOGI(TAG, "Calling back.");
                 client->callback(true, resp);
                 client->callback = nullptr;
             }
@@ -73,16 +73,16 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
                 ESP_LOGD("http", "HTTP_EVENT_DISCONNECTED on already-finished client, ignoring.");
                 break;
             }
-            ESP_LOGI("http", "HTTP_EVENT_DISCONNECTED");
+            ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
         }
         case HTTP_EVENT_ERROR:
-            ESP_LOGI("http", "Failed. Preparing callback...");
+            ESP_LOGI(TAG, "Failed. Preparing callback...");
             // handle error
             client->body = "";
             std::vector<char>().swap(client->response);
             client->incomingHeaders.clear();
             if (client->callback) {
-                ESP_LOGI("http", "Calling back.");
+                ESP_LOGI(TAG, "Calling back.");
                 client->callback(false, Response{});
                 client->callback = nullptr;
             }
@@ -97,7 +97,7 @@ esp_err_t Client::handleEvent(esp_http_client_event_t *evt) {
 
 void Client::request(esp_http_client_method_t method, const std::string &url, const std::string &temp_body, Callback cb) {
     if (busy) {
-        ESP_LOGE("http", "Received a request while we're already busy.");
+        ESP_LOGE(TAG, "Received a request while we're already busy.");
         return;
     }
     busy = true;
@@ -125,10 +125,13 @@ void Client::preparedRequest(Callback cb) {
         ++attempts;
         esp_err_t err = esp_http_client_perform(handle);
         if (!busy) {
+
             return;
         }
+        // If we get EAGAIN, we just try again.
         if (err != ESP_ERR_HTTP_EAGAIN) {
-            ESP_LOGI("http", "client_perform_attempts: %d", attempts);
+            ESP_LOGI(TAG, "client_perform_attempts: %d", attempts);
+            // If we're not ESP_OK, call back with an error and quit looping.
             if (err != ESP_OK) {
                 if (callback) {
                     callback(false, Response{});
@@ -136,6 +139,15 @@ void Client::preparedRequest(Callback cb) {
             }
             break;
         }
+        if (attempts > 500) {
+            ESP_LOGE(TAG, "Still spinning for the HTTP client. Giving up.");
+            if (callback) {
+                callback(false, Response{});
+            }
+            busy = false;
+            break;
+        }
+        vTaskDelay(1);
     }
 }
 
