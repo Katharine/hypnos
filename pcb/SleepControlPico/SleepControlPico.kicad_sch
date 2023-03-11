@@ -3588,7 +3588,7 @@
     (property "Datasheet" "~" (at 119.38 33.02 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC Part #" "C25133" (at 119.38 33.02 0)
+    (property "LCSC Part #" "C25082" (at 119.38 33.02 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 9a8c914f-1e5a-4f58-b4fc-42a45ec3ca61))
