@@ -283,12 +283,16 @@ void StateManager::recheckState(const eightsleep::Bed &newState) {
     enqueue([=]() {
         state.bedTargetTemp = newState.targetTemp;
         state.bedState = newState.active;
-        state.bedActualTemp = newState.currentTemp;
+        // Don't update the actual temp - we can't get the value from here, so it's garbage.
 
         serverUpdatePending = false;
         if ((state.requestedState && state.localTargetTemp != state.bedTargetTemp) || state.requestedState != state.bedState) {
             ESP_LOGI(TAG, "States still don't match, requesting another update.");
             setUpdatePendingTimer();
+        }
+
+        if (updateCallback) {
+            updateCallback(state);
         }
     });
 }

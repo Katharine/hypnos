@@ -3,6 +3,7 @@
 
 #include <esp_log.h>
 #include <wifi_widget.h>
+#include <temp_ticks.h>
 #include <fonts.h>
 
 namespace apps::main {
@@ -135,6 +136,13 @@ void App::showMainScreen() {
     lv_obj_center(tempDescLabel);
     lv_obj_set_pos(tempDescLabel, 0, 40);
 
+    tickCircle = hb_ticks_create(screen);
+    hb_ticks_set_rotation(tickCircle, 135);
+    hb_ticks_set_range(tickCircle, -10, 10);
+    hb_ticks_set_angles(tickCircle, 0, 270);
+    lv_obj_set_size(tickCircle, 200, 200);
+    lv_obj_center(tickCircle);
+
     lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
     stateManager.setUpdateCallback([this](const State& state) {
         handleStateUpdate(state);
@@ -207,11 +215,20 @@ void App::updateMainScreen() {
         lv_obj_set_style_opa(settingArc, LV_OPA_0, LV_PART_KNOB);
     }
 
+    if (stateManager.getState().requestedState) {
+        lv_obj_set_style_opa(tickCircle, LV_OPA_COVER, LV_PART_MAIN);
+        hb_ticks_set_requested_target(tickCircle, stateManager.getState().localTargetTemp / 10);
+        hb_ticks_set_true_target(tickCircle, stateManager.getState().bedTargetTemp / 10);
+        hb_ticks_set_actual(tickCircle, stateManager.getState().bedActualTemp / 10);
+    } else {
+        lv_obj_set_style_opa(tickCircle, LV_OPA_TRANSP, LV_PART_MAIN);
+    }
+
     // Description mapping.
     const char* descriptions[21] = {
-        "EXTREMELY COLD",
-        "EXTREMELY COLD",
-        "EXTREMELY COLD",
+        "SUPER COLD",
+        "SUPER COLD",
+        "SUPER COLD",
         "VERY COLD",
         "VERY COLD",
         "VERY COLD",
@@ -227,9 +244,9 @@ void App::updateMainScreen() {
         "VERY HOT",
         "VERY HOT",
         "VERY HOT",
-        "EXTREMELY HOT",
-        "EXTREMELY HOT",
-        "EXTREMELY HOT",
+        "SUPER HOT",
+        "SUPER HOT",
+        "SUPER HOT",
     };
     const lv_color_t colors[21] = {
         lv_color_hex(0x1862FF),

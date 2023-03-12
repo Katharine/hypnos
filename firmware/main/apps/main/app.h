@@ -46,6 +46,7 @@ private:
     lv_obj_t *settingArc = nullptr;
     lv_obj_t *tempLabel = nullptr;
     lv_obj_t *tempDescLabel = nullptr;
+    lv_obj_t *tickCircle = nullptr;
 };
 
 }

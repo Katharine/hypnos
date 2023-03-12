@@ -224,7 +224,11 @@ rd::expected<Bed, std::string> Client::parseBedResult(const DynamicJsonDocument&
         return rd::unexpected("Request made, but no data returned.");
     }
     return Bed{
-        .currentTemp = kelvin["level"].as<int>(),
+        // The "level" in the kelvin block is not actually the current level.
+        // We have to pull this out of the root object.
+        // Some of our callers won't have this present - in that case, this will be
+        // zero. Callers are expected to know when this works.
+        .currentTemp = doc["result"][bedSide + "HeatingLevel"].as<int>(),
         .targetTemp = kelvin["currentTargetLevel"].as<int>(),
         .active = kelvin["active"].as<bool>(),
     };
