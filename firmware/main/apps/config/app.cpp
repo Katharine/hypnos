@@ -27,6 +27,8 @@ void App::present() {
     if (!(bits & 1)) {
         ESP_LOGE("App", "Got here, which should be impossible.");
     }
+    // Wait a couple of seconds, so we don't tear everything down before the client gets the success message.
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Delete the server.
     server.reset();
     wifi->stop();
