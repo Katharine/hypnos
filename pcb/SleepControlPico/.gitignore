@@ -1,0 +1,9 @@
+gerber/
+production/
+*-backups/
+gerber.zip
+*-bak
+fp-info-cache
+*.kicad_prl
+\#auto_saved_files#
+_autosave-*

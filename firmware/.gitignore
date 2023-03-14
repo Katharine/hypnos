@@ -1,0 +1,8 @@
+build/
+cmake-build-debug/
+sdkconfig # this file is included, but we don't necessarily want random updates to go through too.
+sdkconfig.old
+managed_components/
+.vscode/
+.devcontainer/
+.idea/
