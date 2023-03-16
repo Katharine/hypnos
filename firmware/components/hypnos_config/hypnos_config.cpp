@@ -32,6 +32,10 @@ void HypnosConfig::storeInitialConfig(const std::string &email, const std::strin
     ESP_ERROR_CHECK(handle->set_item("storage_version", 1));
 }
 
+void HypnosConfig::wipe() {
+    handle->erase_all();
+}
+
 std::string HypnosConfig::getEmail() {
     size_t size;
     ESP_ERROR_CHECK(handle->get_item_size(nvs::ItemType::SZ, "email", size));

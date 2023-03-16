@@ -6,6 +6,7 @@
 #include <lvgl_port.h>
 
 #include "../base_app.h"
+#include "settings/menu.h"
 #include "state.h"
 
 namespace apps::main {
@@ -16,6 +17,7 @@ enum struct Screen {
     FetchingState,
     Main,
     Alarm,
+    Settings,
 };
 
 class App : public BaseApp {
@@ -24,7 +26,9 @@ class App : public BaseApp {
     std::shared_ptr<hypnos_config::HypnosConfig> config;
     std::unique_ptr<config_server::Server> server;
     std::shared_ptr<eightsleep::Client> client;
+    settings::Menu menu;
     Screen currentScreen;
+    esp_timer_handle_t longPressTimer = nullptr;
 
     StateManager stateManager;
 
@@ -36,11 +40,12 @@ private:
     void staConnectCallback(bool connected);
     void showConnectingScreen();
     void showConnectionErrorScreen();
-    void showMainScreen();
+    void showMainScreen(lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN);
     void showAlarmScreen();
     void updateMainScreen();
     void handleStateUpdate(const State& state);
     void showFetchingStateScreen();
+    void returnFromMenu();
 
     // main screen UI objects
     lv_obj_t *settingArc = nullptr;

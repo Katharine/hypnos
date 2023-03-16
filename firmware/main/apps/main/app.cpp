@@ -16,7 +16,7 @@ void App::present() {
 App::App(const std::shared_ptr<lvgl_port::LVGLPort> &port, const std::shared_ptr<wifi::WiFi> &wifi,
          const std::shared_ptr<hypnos_config::HypnosConfig> &config,
          const std::shared_ptr<eightsleep::Client> &client) : port(port), wifi(wifi), config(config), client(client),
-                                                              stateManager(client) {
+                                                              menu(config, port, [this]() { returnFromMenu(); }), stateManager(client) {
 
 }
 
@@ -60,7 +60,7 @@ void App::showConnectingScreen() {
     lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
 }
 
-void App::showMainScreen() {
+void App::showMainScreen(lv_scr_load_anim_t transitionAnim) {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::Main;
 
@@ -99,12 +99,45 @@ void App::showMainScreen() {
                      lv_group_get_focused((lv_group_t *) lv_obj_get_group(arc)));
             lv_group_focus_obj(arc);
             lv_group_set_editing((lv_group_t *) lv_obj_get_group(arc), true);
-
-            // ...and also:
-            app->stateManager.setBedState(!app->stateManager.getState().requestedState);
-            app->updateMainScreen();
         }
     }, LV_EVENT_KEY, settingArc);
+
+    lv_obj_add_event_cb(settingArc, [](lv_event_t *event) {
+        auto *app = static_cast<App *>(lv_event_get_user_data(event));
+        // We apparently don't have a working LV_EVENT_LONG_PRESSED (why?), so instead we start a timer here.
+        if (app->currentScreen != Screen::Main) {
+            return;
+        }
+        esp_timer_stop(app->longPressTimer);
+        esp_timer_start_once(app->longPressTimer, 400 * 1000);
+    }, LV_EVENT_PRESSED, this);
+
+    lv_obj_add_event_cb(settingArc, [](lv_event_t *event) {
+        auto *app = static_cast<App *>(lv_event_get_user_data(event));
+        if (app->currentScreen != Screen::Main) {
+            return;
+        }
+        esp_timer_stop(app->longPressTimer);
+        app->stateManager.setBedState(!app->stateManager.getState().requestedState);
+        app->updateMainScreen();
+    }, LV_EVENT_RELEASED, this);
+
+    esp_timer_create_args_t args = {
+        .callback = [](void* arg) {
+            // Long press callback;
+            auto *app = static_cast<App *>(arg);
+            if (app->currentScreen != Screen::Main) {
+                return;
+            }
+            app->currentScreen = Screen::Settings;
+            app->menu.display();
+        },
+        .arg = this,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "LongPressTimer",
+        .skip_unhandled_events = false,
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&args, &longPressTimer));
 
     lv_obj_set_user_data(settingArc, this);
 
@@ -143,7 +176,7 @@ void App::showMainScreen() {
     lv_obj_set_size(tickCircle, 200, 200);
     lv_obj_center(tickCircle);
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
+    lv_scr_load_anim(screen, transitionAnim, 200, 0, true);
     stateManager.setUpdateCallback([this](const State& state) {
         handleStateUpdate(state);
     });
@@ -151,13 +184,15 @@ void App::showMainScreen() {
 }
 
 void App::handleStateUpdate(const State& state) {
+    // TODO: figure out what the actually acceptable state transitions here are.
+    //       Also maybe encode them better.
     if (state.isAlarming) {
         if (currentScreen != Screen::Alarm && currentScreen != Screen::FetchingState) {
             showAlarmScreen();
             return;
         }
     } else {
-        if (currentScreen != Screen::Main) {
+        if (currentScreen == Screen::Alarm || currentScreen == Screen::FetchingState) {
             showMainScreen();
             return;
         }
@@ -320,6 +355,10 @@ void App::showAlarmScreen() {
     }, LV_EVENT_RELEASED, this);
 
     lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
+}
+
+void App::returnFromMenu() {
+    showMainScreen(LV_SCR_LOAD_ANIM_MOVE_RIGHT);
 }
 
 }

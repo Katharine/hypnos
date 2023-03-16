@@ -12,6 +12,7 @@ public:
     HypnosConfig();
     bool hasConfig();
     void storeInitialConfig(const std::string& email, const std::string& password);
+    void wipe();
 
     std::string getEmail();
     std::string getPassword();
