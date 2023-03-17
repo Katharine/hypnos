@@ -5,10 +5,11 @@
 #include <esp_adc/adc_cali_scheme.h>
 #include <esp_adc/adc_continuous.h>
 #include <esp_log.h>
+#include <statics.h>
 
 namespace backlight {
 
-Controller::Controller(const std::shared_ptr<lvgl_port::LVGLPort> &thePort) : port(thePort) {
+Controller::Controller() {
     startTask();
     initADC();
 }
@@ -94,19 +95,19 @@ void Controller::startTask() {
 void Controller::updateBacklight(int raw, int millivolts) {
     if ((lastLevel >= 4 && raw >= 4000) || raw >= 4095) { // Maxed out
         lastLevel = 4;
-        port->setBacklight(4096); // 100% brightness
+        statics::statics.port->setBacklight(4096); // 100% brightness
     } else if ((lastLevel >= 3 && millivolts >= 1400) || millivolts >= 1500) {
         lastLevel = 3;
-        port->setBacklight(2048); // 50% brightness
+        statics::statics.port->setBacklight(2048); // 50% brightness
     } else if ((lastLevel >= 2 && millivolts >= 700) || millivolts >= 800) {
         lastLevel = 2;
-        port->setBacklight(1024); // 50% brightness
+        statics::statics.port->setBacklight(1024); // 50% brightness
     } else if ((lastLevel >= 1 && millivolts >= 7) || millivolts >= 30) {
         lastLevel = 1;
-        port->setBacklight(410); // 10% brightness
+        statics::statics.port->setBacklight(410); // 10% brightness
     } else {
         lastLevel = 0;
-        port->setBacklight(3); // 0.07% brightness
+        statics::statics.port->setBacklight(3); // 0.07% brightness
     }
 }
 

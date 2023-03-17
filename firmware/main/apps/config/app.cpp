@@ -9,17 +9,16 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-#include <esp_sntp.h>
-#include <esp_netif.h>
 #include <eightsleep.h>
+#include <statics.h>
 
 using namespace std::placeholders;
 
 namespace apps::config {
 
 void App::present() {
-    wifi->setAPConnectCallback([this](bool x) { wifiConnectCallback(x); });
-    wifi->startAP();
+    statics::statics.wifi->setAPConnectCallback([this](bool x) { wifiConnectCallback(x); });
+    statics::statics.wifi->startAP();
 
     presentWiFiUI();
 
@@ -31,13 +30,12 @@ void App::present() {
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Delete the server.
     server.reset();
-    wifi->stop();
-    wifi->setAPConnectCallback(nullptr);
+    statics::statics.wifi->stop();
+    statics::statics.wifi->setAPConnectCallback(nullptr);
 }
 
-App::App(const std::shared_ptr<lvgl_port::LVGLPort> &port, const std::shared_ptr<wifi::WiFi> &wifi,
-         const std::shared_ptr<hypnos_config::HypnosConfig> &config, const std::shared_ptr<eightsleep::Client>& client) : port(port), wifi(wifi), config(config), client(client) {
-    server = std::make_unique<config_server::Server>(wifi, client, config);
+App::App() {
+    server = std::make_unique<config_server::Server>();
     eventGroup = xEventGroupCreate();
     server->setCompletionCallback([this](bool success) { completionCallback(success); });
 }
@@ -65,7 +63,7 @@ void App::presentWiFiUI() {
     lv_style_init(&network_name_style);
     lv_style_set_text_font(&network_name_style, &lv_font_montserrat_32);
     wifi_label = lv_label_create(wifi_screen);
-    lv_label_set_text(wifi_label, wifi->getAPSSID().c_str());
+    lv_label_set_text(wifi_label, statics::statics.wifi->getAPSSID().c_str());
     lv_obj_add_style(wifi_label, &network_name_style, 0);
     lv_obj_center(wifi_label);
 
@@ -91,7 +89,7 @@ void App::presentLinkUI() {
     link_screen = lv_obj_create(nullptr);
     lv_obj_set_size(link_screen, lvgl_port::LVGLPort::DISPLAY_WIDTH, lvgl_port::LVGLPort::DISPLAY_HEIGHT);
     lv_obj_t *qr_code = lv_qrcode_create(link_screen, 160, lv_color_black(), lv_color_white());
-    std::string url = "http://" + wifi->getAPIP();
+    std::string url = "http://" + statics::statics.wifi->getAPIP();
     lv_qrcode_update(qr_code, url.c_str(), url.length());
     lv_obj_center(qr_code);
     // TODO: somehow fit the text on, too.

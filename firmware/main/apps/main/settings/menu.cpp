@@ -3,6 +3,7 @@
 //
 
 #include "menu.h"
+#include "statics.h"
 
 #include <lvgl.h>
 #include <lvgl_port.h>
@@ -15,16 +16,14 @@
 
 namespace apps::main::settings {
 
-Menu::Menu(std::shared_ptr<hypnos_config::HypnosConfig> config, std::shared_ptr<lvgl_port::LVGLPort> port, ExitCallback cb) :
-    exitCallback(std::move(cb)), config(std::move(config)), port(std::move(port)) {}
-
 void Menu::display() {
     // Construct ourselves a menu.
-    lv_group_t *group = lv_group_create();
-    lv_group_set_default(group);
+
+    lv_obj_t *screen = statics::statics.screenStack->createScreen();
+    lv_group_t *group = statics::statics.screenStack->groupForScreen(screen);
+
     lv_group_set_wrap(group, false);
-    port->setActiveGroup(group);
-    lv_obj_t *screen = lv_obj_create(nullptr);
+
     container = lv_obj_create(screen);
     lv_obj_set_size(container, lvgl_port::LVGLPort::DISPLAY_WIDTH, lvgl_port::LVGLPort::DISPLAY_HEIGHT);
     lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
@@ -38,11 +37,9 @@ void Menu::display() {
 
     buttonPressed = false;
 
-    // TODO: more of a window stack?
-    // TODO: we're leaking these groups everywhere
     // TODO: confirmation prompts.
 
-    lv_scr_load_anim(screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, true);
+    statics::statics.screenStack->push(screen);
     lv_obj_scroll_to_view(ret, LV_ANIM_OFF);
 }
 
@@ -75,7 +72,7 @@ void Menu::handleFactoryResetPressed(lv_event_t *event) {
         return;
     }
     menu->buttonPressed = false;
-    menu->config->wipe();
+    statics::statics.config->wipe();
     esp_restart();
 }
 
@@ -85,7 +82,7 @@ void Menu::handleReturnPressed(lv_event_t *event) {
         return;
     }
     menu->buttonPressed = false;
-    menu->exitCallback();
+    statics::statics.screenStack->pop();
 }
 
 void Menu::handleButtonDown(lv_event_t *event) {

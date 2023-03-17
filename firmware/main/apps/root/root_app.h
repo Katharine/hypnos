@@ -7,19 +7,12 @@
 
 #include <memory>
 #include <lvgl_port.h>
-#include <wifi.h>
-#include <hypnos_config.h>
-#include <eightsleep.h>
 #include <backlight.h>
 #include "../base_app.h"
 
 namespace apps::root {
 
 class RootApp {
-    std::shared_ptr<lvgl_port::LVGLPort> port;
-    std::shared_ptr<wifi::WiFi> wifi;
-    std::shared_ptr<hypnos_config::HypnosConfig> config;
-    std::shared_ptr<eightsleep::Client> client;
     std::unique_ptr<apps::BaseApp> active_app;
     std::unique_ptr<backlight::Controller> backlight;
 

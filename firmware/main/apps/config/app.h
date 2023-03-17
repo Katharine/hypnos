@@ -20,16 +20,12 @@
 namespace apps::config {
 
 class App : public BaseApp {
-    std::shared_ptr<lvgl_port::LVGLPort> port;
-    std::shared_ptr<wifi::WiFi> wifi;
-    std::shared_ptr<hypnos_config::HypnosConfig> config;
     std::unique_ptr<config_server::Server> server;
-    std::shared_ptr<eightsleep::Client> client;
 
     EventGroupHandle_t eventGroup;
 
 public:
-    App(const std::shared_ptr<lvgl_port::LVGLPort> &port, const std::shared_ptr<wifi::WiFi> &wifi, const std::shared_ptr<hypnos_config::HypnosConfig> &config, const std::shared_ptr<eightsleep::Client>& client);
+    App();
     ~App();
 
     void present() override;

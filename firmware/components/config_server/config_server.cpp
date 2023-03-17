@@ -5,6 +5,7 @@
 #include <vector>
 #include <ArduinoJson.hpp>
 #include <esp_log.h>
+#include <statics.h>
 #include <string>
 
 using namespace std::string_literals;
@@ -13,8 +14,7 @@ CMRC_DECLARE(web);
 
 namespace config_server {
 
-Server::Server(const std::shared_ptr<wifi::WiFi>& wifi, const std::shared_ptr<eightsleep::Client>& client,
-               const std::shared_ptr<hypnos_config::HypnosConfig>& config) : wifi(wifi), client(client), config(config) {
+Server::Server() {
     httpd_config_t httpdConfig = HTTPD_DEFAULT_CONFIG();
     httpdConfig.stack_size = 8192; // hack our way out of stack overflow errors.
     ESP_ERROR_CHECK(httpd_start(&httpd, &httpdConfig));
@@ -64,7 +64,7 @@ esp_err_t Server::serveScan(httpd_req_t *req) {
     ESP_LOGI("server", "Serving scan request...");
     auto *server = static_cast<Server*>(req->user_ctx);
     int fd = httpd_req_to_sockfd(req);
-    server->wifi->setScanCallback([server, fd](const std::vector<wifi_ap_record_t>& records) {
+    statics::statics.wifi->setScanCallback([server, fd](const std::vector<wifi_ap_record_t>& records) {
         ArduinoJson::DynamicJsonDocument result(2000);
         ESP_LOGI("server", "Got callback...");
         result["success"] = true;
@@ -99,10 +99,10 @@ esp_err_t Server::serveScan(httpd_req_t *req) {
             delete a;
             ESP_LOGI("server", "Done.");
         }, ctx);
-        server->wifi->setScanCallback(nullptr);
+        statics::statics.wifi->setScanCallback(nullptr);
     });
     ESP_LOGI("server", "Starting scan...");
-    server->wifi->startScan();
+    statics::statics.wifi->startScan();
     httpd_resp_set_hdr(req, "Content-Type", "application/json");
     ESP_LOGI("server", "Waiting...");
 
@@ -161,7 +161,7 @@ esp_err_t Server::serveJoin(httpd_req_t *req) {
     // If we got this far, we're actually doing something.
     // Stash this away so we can respond asynchronously.
     int fd = httpd_req_to_sockfd(req);
-    server->wifi->setSTAConnectCallback([=](bool connected) {
+    statics::statics.wifi->setSTAConnectCallback([=](bool connected) {
         struct context {
             Server *server;
             int fd;
@@ -179,9 +179,9 @@ esp_err_t Server::serveJoin(httpd_req_t *req) {
             ctx->server->sendSocketData(ctx->fd, response);
             ctx->server->sendSocketData(ctx->fd, json);
         }, ctx);
-        server->wifi->setSTAConnectCallback(nullptr);
+        statics::statics.wifi->setSTAConnectCallback(nullptr);
     });
-    server->wifi->joinNetwork(http::urlDecode(ssid.data()), http::urlDecode(psk.data()));
+    statics::statics.wifi->joinNetwork(http::urlDecode(ssid.data()), http::urlDecode(psk.data()));
     return ESP_OK;
 }
 
@@ -219,13 +219,13 @@ esp_err_t Server::serveLogIn(httpd_req_t *req) {
     std::string emailStr = http::urlDecode(email.get());
     std::string passwordStr = http::urlDecode(password.get());
 
-    server->client->setLogin(emailStr, passwordStr);
+    statics::statics.client->setLogin(emailStr, passwordStr);
 
     // If we got this far, we're actually doing something.
     // Stash this away so we can respond asynchronously.
     int fd = httpd_req_to_sockfd(req);
 
-    server->client->authenticate([=](bool successful) {
+    statics::statics.client->authenticate([=](bool successful) {
         struct context {
             Server *server;
             int fd;
@@ -255,7 +255,7 @@ esp_err_t Server::serveLogIn(httpd_req_t *req) {
 
 void Server::complete(const std::string &email, const std::string &password) {
     // We're probably being called from the thing we're about to tear down, so kick ourselves to a new task for this...
-    config->storeInitialConfig(email, password);
+    statics::statics.config->storeInitialConfig(email, password);
     if (completionCallback) {
         completionCallback(true);
     }

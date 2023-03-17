@@ -39,7 +39,6 @@ struct State {
 class StateManager {
     static constexpr char const * TAG = "StateManager";
     State state;
-    std::shared_ptr<eightsleep::Client> client;
     bool serverUpdatePending = false;
 
     TaskHandle_t task = nullptr;
@@ -55,7 +54,7 @@ class StateManager {
     std::function<void(const State&)> updateCallback = nullptr;
 
 public:
-    explicit StateManager(const std::shared_ptr<eightsleep::Client>& client);
+    StateManager();
     ~StateManager();
     void setTargetTemp(int target);
     void setBedState(bool on);

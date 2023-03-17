@@ -10,6 +10,7 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <esp_sntp.h>
+#include <statics.h>
 
 namespace apps::main {
 
@@ -26,8 +27,7 @@ struct Message {
 // hack hack hack
 static StateManager *theStateManager = nullptr;
 
-StateManager::StateManager(const std::shared_ptr<eightsleep::Client>& client) {
-    this->client = client;
+StateManager::StateManager() {
     queue = xQueueCreate(10, sizeof(Message *));
     xTaskCreate(&StateManager::taskLoop, "8SlpTask", 8192, this, 5, &task);
 
@@ -149,7 +149,7 @@ void StateManager::enqueue(std::function<void()> fn) {
 
 void StateManager::updateBedState(std::function<void(rd::expected<const State*, std::string>)> cb) {
     enqueue([=, this]() {
-        client->getBedStatus([=, this](rd::expected<eightsleep::Bed, std::string> result) {
+        statics::statics.client->getBedStatus([=, this](rd::expected<eightsleep::Bed, std::string> result) {
             if(!result) {
                 ESP_LOGI(TAG, "Failed to update bed status: %s", result.error().c_str());
                 if (cb) {
@@ -210,7 +210,7 @@ void StateManager::setUpdatePendingTimer() {
 
 void StateManager::stopAlarm(std::function<void(rd::expected<bool, std::string>)> cb) {
     enqueue([cb, this]() {
-        client->stopAlarms([cb, this](bool result) {
+        statics::statics.client->stopAlarms([cb, this](bool result) {
             if (!result) {
                 cb(rd::unexpected("stopping alarm failed for some reason"));
             } else {
@@ -235,7 +235,7 @@ void StateManager::syncStateToServer() {
     std::function<void()> updateTemp = nullptr;
     if (state.localTargetTemp != state.bedTargetTemp) {
         updateTemp = [this]() {
-            client->setTemp(state.localTargetTemp, [this](rd::expected<eightsleep::Bed, std::string> result) {
+            statics::statics.client->setTemp(state.localTargetTemp, [this](rd::expected<eightsleep::Bed, std::string> result) {
                 if (!result) {
                     ESP_LOGW(TAG, "Temperature update failed: %s", result.error().c_str());
                     state.localTargetTemp = state.bedTargetTemp;
@@ -252,7 +252,7 @@ void StateManager::syncStateToServer() {
         };
     }
     if (state.bedState != state.requestedState) {
-        client->setBedState(state.requestedState, [this, updateTemp](rd::expected<eightsleep::Bed, std::string> result) {
+        statics::statics.client->setBedState(state.requestedState, [this, updateTemp](rd::expected<eightsleep::Bed, std::string> result) {
             if (!result) {
                 ESP_LOGW(TAG, "State update failed: %s", result.error().c_str());
                 state.localTargetTemp = state.bedTargetTemp;
@@ -300,7 +300,7 @@ void StateManager::recheckState(const eightsleep::Bed &newState) {
 void StateManager::reauthTimerHandler(void *ctx) {
     auto *manager = static_cast<StateManager*>(ctx);
     manager->enqueue([manager]() {
-        manager->client->authenticate(nullptr);
+        statics::statics.client->authenticate(nullptr);
     });
 }
 
@@ -327,7 +327,7 @@ void StateManager::alarmExpectedHandler(void *ctx) {
 
 void StateManager::updateAlarmSchedule(const std::function<void(rd::expected<bool, std::string>)>& cb) {
     enqueue([this, cb]() {
-        client->getAlarms([this, cb](rd::expected<std::vector<eightsleep::Alarm>, std::string> result) {
+        statics::statics.client->getAlarms([this, cb](rd::expected<std::vector<eightsleep::Alarm>, std::string> result) {
             if (!result) {
                 ESP_LOGE(TAG, "Failed to update alarms: %s", result.error().c_str());
                 if (cb) {
@@ -379,7 +379,7 @@ void StateManager::alarmOngoingPollHandler(void *ctx) {
 }
 
 void StateManager::pollActiveAlarm() {
-    client->hasActiveAlarm([this](rd::expected<bool, std::string> result) {
+    statics::statics.client->hasActiveAlarm([this](rd::expected<bool, std::string> result) {
         // The expected result is a bool so we have to be explicit.
         if (!result.has_value()) {
             ESP_LOGE(TAG, "Looking up alarm status failed. Generously assuming it is gone.");

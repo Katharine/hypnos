@@ -21,31 +21,25 @@ enum struct Screen {
 };
 
 class App : public BaseApp {
-    std::shared_ptr<lvgl_port::LVGLPort> port;
-    std::shared_ptr<wifi::WiFi> wifi;
-    std::shared_ptr<hypnos_config::HypnosConfig> config;
     std::unique_ptr<config_server::Server> server;
-    std::shared_ptr<eightsleep::Client> client;
     settings::Menu menu;
     Screen currentScreen;
     esp_timer_handle_t longPressTimer = nullptr;
 
-    StateManager stateManager;
+    StateManager stateManager{};
 
 public:
-    App(const std::shared_ptr<lvgl_port::LVGLPort> &port, const std::shared_ptr<wifi::WiFi> &wifi, const std::shared_ptr<hypnos_config::HypnosConfig> &config, const std::shared_ptr<eightsleep::Client>& client);
     void present() override;
 
 private:
     void staConnectCallback(bool connected);
     void showConnectingScreen();
     void showConnectionErrorScreen();
-    void showMainScreen(lv_scr_load_anim_t anim = LV_SCR_LOAD_ANIM_FADE_IN);
+    void showMainScreen();
     void showAlarmScreen();
     void updateMainScreen();
     void handleStateUpdate(const State& state);
     void showFetchingStateScreen();
-    void returnFromMenu();
 
     // main screen UI objects
     lv_obj_t *settingArc = nullptr;

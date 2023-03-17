@@ -6,7 +6,6 @@
 #include <freertos/task.h>
 #include <esp_adc/adc_cali_scheme.h>
 #include <esp_adc/adc_continuous.h>
-#include "lvgl_port.h"
 
 namespace backlight {
 
@@ -15,14 +14,13 @@ class Controller {
     static constexpr size_t ADC_FRAME_SIZE = 1024;
     static constexpr adc_atten_t ADC_ATTENUATION = ADC_ATTEN_DB_6;
     static constexpr char const *TAG = "Backlight";
-    std::shared_ptr<lvgl_port::LVGLPort> port;
     TaskHandle_t taskHandle = nullptr;
     adc_continuous_handle_t adcHandle = nullptr;
     adc_cali_handle_t caliHandle = nullptr;
     int8_t lastLevel = 0;
 
 public:
-    explicit Controller(const std::shared_ptr<lvgl_port::LVGLPort>& thePort);
+    Controller();
 
 private:
     void startTask();

@@ -3,22 +3,16 @@
 
 #include <esp_http_server.h>
 #include <memory>
-#include <wifi.h>
-#include <eightsleep.h>
-#include <hypnos_config.h>
+#include <functional>
 
 typedef void* httpd_handle_t;
 
 namespace config_server {
 
 class Server {
-    std::shared_ptr<wifi::WiFi> wifi;
-    std::shared_ptr<eightsleep::Client> client;
-    std::shared_ptr<hypnos_config::HypnosConfig> config;
-
     std::function<void(bool)> completionCallback;
 public:
-    Server(const std::shared_ptr<wifi::WiFi>& wifi, const std::shared_ptr<eightsleep::Client>& client, const std::shared_ptr<hypnos_config::HypnosConfig>& config);
+    Server();
     ~Server();
     void setCompletionCallback(const std::function<void(bool)>& fn);
 
