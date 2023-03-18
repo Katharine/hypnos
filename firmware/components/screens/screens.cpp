@@ -12,6 +12,7 @@ void Stack::push(lv_obj_t *newScreen) {
         lv_scr_load_anim(newScreen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, false);
     }
     activateScreen(newScreen);
+    screens.push_back(newScreen);
 }
 
 void Stack::replace(lv_obj_t *newScreen) {
@@ -21,11 +22,11 @@ void Stack::replace(lv_obj_t *newScreen) {
     }
     lv_scr_load_anim(newScreen, LV_SCR_LOAD_ANIM_FADE_IN, 200, 0, true);
     activateScreen(newScreen);
+    screens.push_back(newScreen);
 }
 
 void Stack::pop() {
     if (screens.size() == 1) {
-        ESP_LOGW(TAG, "Asked to pop root window; ignoring.");
         return;
     }
     destroyScreen(screens.back());
@@ -69,7 +70,6 @@ void Stack::activateScreen(lv_obj_t *screen) {
     } else {
         ESP_LOGW(TAG, "Not activating group because we don't know what group we want");
     }
-    screens.push_back(screen);
 }
 
 void Stack::destroyScreen(lv_obj_t *screen) {
