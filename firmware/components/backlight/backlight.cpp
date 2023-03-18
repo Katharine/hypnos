@@ -107,7 +107,7 @@ void Controller::updateBacklight(int raw, int millivolts) {
         statics::port->setBacklight(410); // 10% brightness
     } else {
         lastLevel = 0;
-        statics::port->setBacklight(3); // 0.07% brightness
+        statics::port->setBacklight(2); // 0.05% brightness
     }
 }
 
