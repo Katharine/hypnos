@@ -3,10 +3,11 @@
 //
 
 #include "menu.h"
-#include "statics.h"
 
 #include <lvgl.h>
 #include <lvgl_port.h>
+#include <statics.h>
+#include <prompts.h>
 
 #include <string>
 #include <esp_system.h>
@@ -61,9 +62,11 @@ void Menu::handleRebootPressed(lv_event_t *event) {
     if (!menu->buttonPressed) {
         return;
     }
-    ESP_LOGI("menu", "rebooting!");
-    vTaskDelay(100);
-    esp_restart();
+    prompts::Confirm::Display("Are you\nsure you want to reboot?", "Yes", "No", []() {
+        ESP_LOGI("menu", "rebooting!");
+        vTaskDelay(1);
+        esp_restart();
+    }, nullptr);
 }
 
 void Menu::handleFactoryResetPressed(lv_event_t *event) {
@@ -72,8 +75,10 @@ void Menu::handleFactoryResetPressed(lv_event_t *event) {
         return;
     }
     menu->buttonPressed = false;
-    statics::config->wipe();
-    esp_restart();
+    prompts::Confirm::Display("Are you\nsure you want to factory reset?", "Yes", "No", []() {
+        statics::config->wipe();
+        esp_restart();
+    }, nullptr);
 }
 
 void Menu::handleReturnPressed(lv_event_t *event) {
