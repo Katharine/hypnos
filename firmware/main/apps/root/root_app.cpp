@@ -25,17 +25,17 @@ void RootApp::init() {
     ESP_LOGI("wifi", "Initialising event loop...");
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    statics::statics.port = std::make_unique<lvgl_port::LVGLPort>();
+    statics::port = std::make_unique<lvgl_port::LVGLPort>();
     backlight = std::make_unique<backlight::Controller>();
-    statics::statics.wifi = std::make_unique<wifi::WiFi>();
-    statics::statics.config = std::make_unique<hypnos_config::HypnosConfig>();
-    statics::statics.client = std::make_unique<eightsleep::Client>();
+    statics::wifi = std::make_unique<wifi::WiFi>();
+    statics::config = std::make_unique<hypnos_config::HypnosConfig>();
+    statics::client = std::make_unique<eightsleep::Client>();
 
     // Set up our shared styles/theming.
     styles::init();
 
-    if (statics::statics.wifi->hasConfig() && statics::statics.config->hasConfig()) {
-        statics::statics.client->setLogin(statics::statics.config->getEmail(), statics::statics.config->getPassword());
+    if (statics::wifi->hasConfig() && statics::config->hasConfig()) {
+        statics::client->setLogin(statics::config->getEmail(), statics::config->getPassword());
         ESP_LOGI("App", "Jumping straight into the main app!");
         active_app = std::make_unique<apps::main::App>();
         active_app->present();

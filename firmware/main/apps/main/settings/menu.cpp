@@ -19,8 +19,8 @@ namespace apps::main::settings {
 void Menu::display() {
     // Construct ourselves a menu.
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen();
-    lv_group_t *group = statics::statics.screenStack->groupForScreen(screen);
+    lv_obj_t *screen = statics::screenStack->createScreen();
+    lv_group_t *group = statics::screenStack->groupForScreen(screen);
 
     lv_group_set_wrap(group, false);
 
@@ -39,7 +39,7 @@ void Menu::display() {
 
     // TODO: confirmation prompts.
 
-    statics::statics.screenStack->push(screen);
+    statics::screenStack->push(screen);
     lv_obj_scroll_to_view(ret, LV_ANIM_OFF);
 }
 
@@ -72,7 +72,7 @@ void Menu::handleFactoryResetPressed(lv_event_t *event) {
         return;
     }
     menu->buttonPressed = false;
-    statics::statics.config->wipe();
+    statics::config->wipe();
     esp_restart();
 }
 
@@ -82,7 +82,7 @@ void Menu::handleReturnPressed(lv_event_t *event) {
         return;
     }
     menu->buttonPressed = false;
-    statics::statics.screenStack->pop();
+    statics::screenStack->pop();
 }
 
 void Menu::handleButtonDown(lv_event_t *event) {

@@ -14,15 +14,11 @@
 
 namespace statics {
 
-struct Statics {
-    std::unique_ptr<lvgl_port::LVGLPort> port = nullptr;
-    std::unique_ptr<wifi::WiFi> wifi = nullptr;
-    std::unique_ptr<hypnos_config::HypnosConfig> config = nullptr;
-    std::unique_ptr<eightsleep::Client> client = nullptr;
-    std::unique_ptr<screens::Stack> screenStack = std::make_unique<screens::Stack>();
-};
-
-extern Statics statics;
+extern std::unique_ptr<lvgl_port::LVGLPort> port;
+extern std::unique_ptr<wifi::WiFi> wifi;
+extern std::unique_ptr<hypnos_config::HypnosConfig> config;
+extern std::unique_ptr<eightsleep::Client> client;
+extern std::unique_ptr<screens::Stack> screenStack;
 
 }
 

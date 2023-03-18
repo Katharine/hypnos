@@ -11,12 +11,12 @@ namespace apps::main {
 
 void App::present() {
     showConnectingScreen();
-    statics::statics.wifi->startNormal([this](bool x) { staConnectCallback(x); });
+    statics::wifi->startNormal([this](bool x) { staConnectCallback(x); });
 }
 
 void App::staConnectCallback(bool connected) {
     if (connected) {
-        statics::statics.client->authenticate([this](bool success) {
+        statics::client->authenticate([this](bool success) {
            if (success) {
                showFetchingStateScreen();
                stateManager.updateBedState([this](rd::expected<const State*, std::string> result) {
@@ -47,18 +47,18 @@ void App::showConnectingScreen() {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::Connecting;
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen();
+    lv_obj_t *screen = statics::screenStack->createScreen();
     lv_obj_t *wifi_icon = hb_wifi_create(screen);
     lv_obj_center(wifi_icon);
 
-    statics::statics.screenStack->replace(screen);
+    statics::screenStack->replace(screen);
 }
 
 void App::showMainScreen() {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::Main;
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen([this]() {
+    lv_obj_t *screen = statics::screenStack->createScreen([this]() {
         currentScreen = Screen::Main;
     });
 
@@ -153,7 +153,7 @@ void App::showMainScreen() {
     lv_obj_set_style_pad_all(settingArc, 0, LV_PART_KNOB);
     lv_obj_set_style_arc_opa(settingArc, 0, LV_PART_INDICATOR);
 
-    lv_group_t *group = statics::statics.screenStack->groupForScreen(screen);
+    lv_group_t *group = statics::screenStack->groupForScreen(screen);
     lv_group_add_obj(group, settingArc);
     lv_group_focus_obj(settingArc);
     lv_group_set_editing(group, true);
@@ -170,7 +170,7 @@ void App::showMainScreen() {
     lv_obj_set_size(tickCircle, 200, 200);
     lv_obj_center(tickCircle);
 
-    statics::statics.screenStack->replace(screen);
+    statics::screenStack->replace(screen);
     stateManager.setUpdateCallback([this](const State& state) {
         handleStateUpdate(state);
     });
@@ -198,24 +198,24 @@ void App::showConnectionErrorScreen() {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::ConnectionError;
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen();
+    lv_obj_t *screen = statics::screenStack->createScreen();
     lv_obj_t *label = lv_label_create(screen);
     lv_label_set_text(label, "Connection error.");
     lv_obj_center(label);
 
-    statics::statics.screenStack->replace(screen);
+    statics::screenStack->replace(screen);
 }
 
 void App::showFetchingStateScreen() {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::FetchingState;
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen();
+    lv_obj_t *screen = statics::screenStack->createScreen();
 
     lv_obj_t *spinner = lv_spinner_create(screen, 1000, 40);
     lv_obj_center(spinner);
 
-    statics::statics.screenStack->replace(screen);
+    statics::screenStack->replace(screen);
 }
 
 void App::updateMainScreen() {
@@ -313,7 +313,7 @@ void App::showAlarmScreen() {
     auto lock = lvgl_port::Lock();
     currentScreen = Screen::Alarm;
 
-    lv_obj_t *screen = statics::statics.screenStack->createScreen();
+    lv_obj_t *screen = statics::screenStack->createScreen();
     lv_obj_t *label = lv_label_create(screen);
     lv_label_set_text(label, "ALARM");
     lv_obj_set_style_text_font(label, &montserrat_56_digits, 0);
@@ -344,7 +344,7 @@ void App::showAlarmScreen() {
 
     }, LV_EVENT_RELEASED, this);
 
-    statics::statics.screenStack->replace(screen);
+    statics::screenStack->replace(screen);
 }
 
 }

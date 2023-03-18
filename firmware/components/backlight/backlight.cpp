@@ -95,19 +95,19 @@ void Controller::startTask() {
 void Controller::updateBacklight(int raw, int millivolts) {
     if ((lastLevel >= 4 && raw >= 4000) || raw >= 4095) { // Maxed out
         lastLevel = 4;
-        statics::statics.port->setBacklight(4096); // 100% brightness
+        statics::port->setBacklight(4096); // 100% brightness
     } else if ((lastLevel >= 3 && millivolts >= 1400) || millivolts >= 1500) {
         lastLevel = 3;
-        statics::statics.port->setBacklight(2048); // 50% brightness
+        statics::port->setBacklight(2048); // 50% brightness
     } else if ((lastLevel >= 2 && millivolts >= 700) || millivolts >= 800) {
         lastLevel = 2;
-        statics::statics.port->setBacklight(1024); // 50% brightness
+        statics::port->setBacklight(1024); // 50% brightness
     } else if ((lastLevel >= 1 && millivolts >= 7) || millivolts >= 30) {
         lastLevel = 1;
-        statics::statics.port->setBacklight(410); // 10% brightness
+        statics::port->setBacklight(410); // 10% brightness
     } else {
         lastLevel = 0;
-        statics::statics.port->setBacklight(3); // 0.07% brightness
+        statics::port->setBacklight(3); // 0.07% brightness
     }
 }
 

@@ -65,7 +65,7 @@ void Stack::callCallbackForScreen(lv_obj_t *screen) {
 void Stack::activateScreen(lv_obj_t *screen) {
     lv_group_t *group = groupForScreen(screen);
     if (group) {
-        statics::statics.port->setActiveGroup(group);
+        statics::port->setActiveGroup(group);
     } else {
         ESP_LOGW(TAG, "Not activating group because we don't know what group we want");
     }
