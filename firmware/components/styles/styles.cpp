@@ -9,6 +9,7 @@
 static lv_theme_t custom_theme;
 static lv_style_t screen_style;
 static lv_style_t wifi_style;
+static lv_style_t container_style;
 
 namespace {
 
@@ -18,6 +19,10 @@ void theme_apply_cb(lv_theme_t *theme, lv_obj_t *obj) {
     // It's a screen
     if (lv_obj_get_parent(obj) == nullptr) {
         lv_obj_add_style(obj, &screen_style, 0);
+        return;
+    }
+    if (lv_obj_get_class(obj) == &lv_obj_class) {
+        lv_obj_add_style(obj, &container_style, 0);
         return;
     }
     if (lv_obj_get_class(obj) == &hb_wifi_class) {
@@ -33,6 +38,13 @@ void styles::init() {
     lv_style_init(&screen_style);
     lv_style_set_bg_color(&screen_style, lv_color_black());
     lv_style_set_bg_opa(&screen_style, LV_OPA_COVER);
+
+    // Set up the container style
+    lv_style_init(&container_style);
+    lv_style_set_bg_color(&container_style, lv_color_black());
+    lv_style_set_bg_opa(&container_style, LV_OPA_TRANSP);
+    lv_style_set_border_width(&container_style, 0);
+//    lv_style_set_pad_all(&container_style, 0);
 
     // Set up the Wi-Fi style
     lv_style_init(&wifi_style);
