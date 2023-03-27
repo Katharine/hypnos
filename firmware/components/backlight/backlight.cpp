@@ -23,7 +23,7 @@ void Controller::initADC() {
 
     adc_digi_pattern_config_t adc_pattern[1] = {{
         .atten = ADC_ATTENUATION,
-        .channel = 5, // pin/gpio 6
+        .channel = 1, // pin/gpio 2
         .unit = ADC_UNIT_1,
         .bit_width = ADC_BITWIDTH_12,
     }};
